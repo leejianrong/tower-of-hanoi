@@ -1,4 +1,4 @@
-from core.game import TowerGame
+from game import TowerGame
 
 def play_tower_game():
     tower_game = TowerGame()

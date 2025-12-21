@@ -1,5 +1,5 @@
-from .disc import Disc
-from .rod import Rod
+from disc import Disc
+from rod import Rod
 from typing import List, Tuple, Optional
 
 class TowerGame:

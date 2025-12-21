@@ -1,8 +1,8 @@
 import pygame
 import sys
+
 from color import Color, DISC_ID_TO_COLOR
-
-
+from tower import Tower
 
 class Renderer:
     """
@@ -61,6 +61,13 @@ if __name__ == "__main__":
     # Create player object and add to the renderer
     # player = Disc(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, width=270, height=50)
     # renderer.add_element(player)
+    tower = Tower(
+        screen_width=SCREEN_WIDTH, 
+        screen_height=SCREEN_HEIGHT, 
+        num_rods=3, 
+        num_discs=5
+    )
+    renderer.add_element(tower)
 
     # Main game loop
     running = True

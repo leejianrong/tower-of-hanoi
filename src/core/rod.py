@@ -1,4 +1,4 @@
-from .disc import Disc
+from disc import Disc
 from typing import List
 
 class Rod:
