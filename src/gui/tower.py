@@ -27,7 +27,7 @@ class Tower:
         for id, center_x in enumerate(range(start_x_pos, stop_x_pos, step_x)):
             center_y = self.screen_height // 2
             # print(f"adding rod at ({center_x}, {center_y})")
-            rod = Rod(center_x=center_x, center_y=center_y)
+            rod = Rod(center_x=center_x, center_y=center_y, id=id)
             self.rods[id] = rod
 
     def init_discs(self):
@@ -39,6 +39,7 @@ class Tower:
         width_delta = 40
         disc_height = 50
         for idx in range(self.num_discs):
+            # create discs from largest (bottom) to smallest (top)
             center_y = start_y_pos - step_y * idx
             width = start_width - width_delta * idx
             disc_id = self.num_discs - idx - 1
@@ -47,7 +48,8 @@ class Tower:
                 center_y=center_y,
                 width=width,
                 height=disc_height,
-                color=DISC_ID_TO_COLOR[disc_id]
+                color=DISC_ID_TO_COLOR[disc_id],
+                id=disc_id
             )
             self.discs[disc_id] = disc
 

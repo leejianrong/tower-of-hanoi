@@ -13,12 +13,14 @@ class Color(Enum):
     PASTEL_MAUVE = pygame.Color("#ebccff")
     DAVYS_GREY = pygame.Color("#595959")
     LIGHT_GRAY = pygame.Color("#dad8c9")
+    EARTHY_OLIVE = pygame.Color("#b8ceaa")
+    INCHWORM = pygame.Color("#b8e02d")
 
 
 DISC_ID_TO_COLOR: Dict[int, pygame.Color] = {
     0: Color.PASTEL_FLESH.value,
     1: Color.PASTEL_AMBER.value,
-    2: Color.PASTEL_LIME.value,
+    2: Color.EARTHY_OLIVE.value,
     3: Color.PASTEL_SKY.value,
     4: Color.PASTEL_MAUVE.value,
 }

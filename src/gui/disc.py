@@ -10,6 +10,8 @@ class Disc:
         width: int, 
         height: int, 
         color: Color, 
+        id: int,
+        label_color: pygame.Color = Color.PASTEL_WHITE.value,
         movement_speed: int = 5
     ) -> None:
         self.surf: pygame.Surface = pygame.Surface((width, height))
@@ -17,6 +19,11 @@ class Disc:
 
         self.rect: pygame.Rect = self.surf.get_rect()
         self.rect.center = (center_x, center_y)
+
+        font = pygame.font.SysFont(None, 16)
+        label_surf = font.render(str(id), True, label_color)
+        label_rect = label_surf.get_rect(center=(width - 15, height - 15))
+        self.surf.blit(label_surf, label_rect)
 
         self.speed: int = movement_speed
 

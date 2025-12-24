@@ -48,7 +48,7 @@ class TowerGame:
             if rod_idx == 0:
                 self.rods[rod_idx] = Rod(
                     id=rod_idx, 
-                    discs=[Disc(id=disc_id) for disc_id in range(self.num_discs, 0, -1)]
+                    discs=[Disc(id=disc_id) for disc_id in range(self.num_discs - 1, -1, -1)]
                 )
             else:
                 self.rods[rod_idx] = Rod(id=rod_idx, discs=[])
