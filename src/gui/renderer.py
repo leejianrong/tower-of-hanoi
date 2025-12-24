@@ -46,6 +46,12 @@ class Renderer:
 
         # Update the display to make the changes visible
         pygame.display.update() # or pygame.display.flip()
+    
+    def update_all(self):
+        """Update all elements that have an update() method"""
+        for element in self.renderable_objects:
+            if hasattr(element, "update"):
+                element.update()
 
 
 if __name__ == "__main__":
@@ -78,7 +84,7 @@ if __name__ == "__main__":
             if event.type == pygame.QUIT:
                 running = False
 
-        # player.update() # game logic update
+        renderer.update_all() # game logic update
         renderer.render_all() # rendering
         clock.tick(60) # cap frame rate
     

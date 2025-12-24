@@ -51,14 +51,15 @@ class Tower:
             )
             self.discs[disc_id] = disc
 
-    def render_rods(self, surface):
+    def render(self, surface):
         for _, rod in self.rods.items():
             rod.render(surface)
-    
-    def render_discs(self, surface):
         for _, disc in self.discs.items():
             disc.render(surface)
-    
-    def render(self, surface):
-        self.render_rods(surface)
-        self.render_discs(surface)
+
+    def update(self):
+        for _, disc in self.discs.items():
+            disc.update()
+
+    # def move_disc(self, disc_id, start_rod_id, target_rod_id):
+        

@@ -134,6 +134,11 @@ class TowerGame:
             game_state.append(tuple(disc_ids))
 
         return tuple(game_state)
+    
+    @property
+    def is_solved(self) -> bool:
+        return self.current_state == self.terminal_state
+    
 
 if __name__ == "__main__":
     tower_game = TowerGame()

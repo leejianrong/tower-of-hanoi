@@ -3,7 +3,7 @@ from game import TowerGame
 def play_tower_game():
     tower_game = TowerGame()
     num_moves = 0
-    while tower_game.current_state != tower_game.terminal_state:
+    while not tower_game.is_solved:
         print(f"\nNumber of Moves: {num_moves}")
         print(f"Current State: {tower_game.current_state}")
 
