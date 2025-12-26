@@ -1,6 +1,7 @@
 import pygame
 import sys
 
+from typing import Tuple
 from color import Color, DISC_ID_TO_COLOR
 from tower import Tower
 
@@ -16,7 +17,6 @@ class Renderer:
         self.background_color = background_color
         # A list to keep track of objects that need a custom render method called
         self.renderable_objects = []
-        # self.init_renderable_objects()
 
     def add_element(self, element):
         """Add an element to be rendered every frame."""
@@ -47,11 +47,13 @@ class Renderer:
         # Update the display to make the changes visible
         pygame.display.update() # or pygame.display.flip()
     
-    def update_all(self):
-        """Update all elements that have an update() method"""
+    def update_all(self, game_state: Tuple[Tuple[int]]):
+        """Call update() method for all updatable elements."""
+        # For now, tower is the only updatable element
+        # It encapsulates the rods and discs, of which discs are updatable
         for element in self.renderable_objects:
             if hasattr(element, "update"):
-                element.update()
+                element.update(game_state)
 
 
 if __name__ == "__main__":
@@ -64,9 +66,6 @@ if __name__ == "__main__":
     # Set up the renderer
     renderer = Renderer(screen, background_color=Color.PASTEL_WHITE.value)
 
-    # Create player object and add to the renderer
-    # player = Disc(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, width=270, height=50)
-    # renderer.add_element(player)
     tower = Tower(
         screen_width=SCREEN_WIDTH, 
         screen_height=SCREEN_HEIGHT, 

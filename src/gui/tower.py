@@ -1,8 +1,16 @@
-import pygame
+from typing import Tuple
 from color import Color, DISC_ID_TO_COLOR
 from disc import Disc
 from rod import Rod
     
+ROD_WIDTH = 30
+ROD_HEIGHT = 320
+DISC_STEP_Y = 50
+DISC_START_POS_Y = 495
+DISC_BASE_WIDTH = 270
+DISC_WIDTH_DELTA = 40
+DISC_HEIGHT = 50
+START_STATE = ((4, 3, 2, 1, 0), (), ())
 
 class Tower:
     """
@@ -13,41 +21,41 @@ class Tower:
         self.screen_height = screen_height
         self.num_rods = num_rods
         self.num_discs = num_discs
-        self.rods = {}
-        self.discs = {}
-        self.init_rods()
-        self.init_discs()
+        self.reset(start_state=START_STATE)
 
-    def init_rods(self):
+    def reset(self, start_state):
+        self.reset_rods()
+        self.reset_discs(start_state)
+
+    def reset_rods(self):
         """Add rods as static objects to list of renderable objects during init."""
+        self.rods = {}
         start_x_pos = self.screen_width // 8
         step_x = start_x_pos * 2
         stop_x_pos = step_x * 3
 
         for id, center_x in enumerate(range(start_x_pos, stop_x_pos, step_x)):
             center_y = self.screen_height // 2
-            # print(f"adding rod at ({center_x}, {center_y})")
-            rod = Rod(center_x=center_x, center_y=center_y, id=id)
+            print(f"adding rod at ({center_x}, {center_y}) of width={ROD_WIDTH}, height={ROD_HEIGHT}")
+            rod = Rod(center_x=center_x, center_y=center_y, width=ROD_WIDTH, height=ROD_HEIGHT, id=id)
             self.rods[id] = rod
 
-    def init_discs(self):
+    def reset_discs(self, start_state: Tuple[Tuple[int]]):
         # Initialize the discs
-        start_x_pos = self.screen_width // 8
-        step_y = 50
-        start_y_pos = 520
-        start_width = 270
-        width_delta = 40
-        disc_height = 50
+        self.discs = {}
+        disc_positions = self.compute_disc_positions_from_state(start_state)
+
         for idx in range(self.num_discs):
             # create discs from largest (bottom) to smallest (top)
-            center_y = start_y_pos - step_y * idx
-            width = start_width - width_delta * idx
             disc_id = self.num_discs - idx - 1
+            center_x, center_y = disc_positions[disc_id]
+            width = DISC_BASE_WIDTH - DISC_WIDTH_DELTA * idx
+            
             disc = Disc( 
-                center_x=start_x_pos, 
+                center_x=center_x, 
                 center_y=center_y,
                 width=width,
-                height=disc_height,
+                height=DISC_HEIGHT,
                 color=DISC_ID_TO_COLOR[disc_id],
                 id=disc_id
             )
@@ -59,9 +67,27 @@ class Tower:
         for _, disc in self.discs.items():
             disc.render(surface)
 
-    def update(self):
-        for _, disc in self.discs.items():
+    def update(self, game_state: Tuple[Tuple[int]]):
+        desired_disc_positions = self.compute_disc_positions_from_state(game_state)
+        for disc_idx, disc in self.discs.items():
+            desired_x, desired_y = desired_disc_positions[disc_idx]
+            disc.set_target(desired_x, desired_y)
             disc.update()
 
-    # def move_disc(self, disc_id, start_rod_id, target_rod_id):
-        
+    def compute_disc_positions_from_state(self, game_state: Tuple[Tuple[int]]) -> Tuple[Tuple[int]]:
+        """
+        Given a certain game state like ((4, 3, 2), (1), (0)),
+        compute the disc coordinates in pygame.
+        Returns the disc coordinates as a tuple of tuples:
+        ((x0, y0), (x1, y1), ... (x4, y4))
+        """
+        disc_positions = [() for _ in range(self.num_discs)]
+        for rod_idx, rod_state in enumerate(game_state):
+            center_x = self.rods[rod_idx].rect.center[0]
+
+            for pos_idx, disc_idx in enumerate(rod_state):
+                center_y = DISC_START_POS_Y - DISC_STEP_Y * pos_idx
+                disc_positions[disc_idx] = (center_x, center_y)
+
+        return tuple(disc_positions)
+            

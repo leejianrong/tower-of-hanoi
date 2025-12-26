@@ -2,7 +2,7 @@ import pygame
 from color import Color
 
 class Rod:
-    """Rod that will be rendered as static objects."""
+    """Rod that will be rendered as a static object."""
     def __init__(
         self, 
         center_x: int, 
@@ -19,13 +19,11 @@ class Rod:
         self.rect.center = (center_x, center_y)
 
         label_font = pygame.font.SysFont(None, 24)
-        label_color = label_color
-        label_text = str(id)
-        self.label_surf = label_font.render(label_text, True, label_color)
+        self.label_surf = label_font.render(str(id), True, label_color)
         # Lock the top-center of the text to the bottom-center of the rod
         # Add a small y-offset (e.g., +30) for spacing
         self.label_rect = self.label_surf.get_rect(
-            midtop=(self.rect.midbottom[0], self.rect.midbottom[1] + 40)
+            midtop=(self.rect.midbottom[0], self.rect.midbottom[1] + 30)
         )
 
     def render(self, surface):
