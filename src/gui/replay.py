@@ -16,7 +16,7 @@ class ReplayManager:
         self.current_disc_id = None
 
     def read_game_record(self, filename: str):  
-        parent_dir = Path(__file__).resolve().parent.parent
+        parent_dir = Path(__file__).resolve().parent.parent.parent
         json_filepath = os.path.join(parent_dir, "records", filename)
 
         with open(json_filepath, "r") as f:

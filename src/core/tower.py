@@ -1,5 +1,5 @@
-from disc import Disc
-from rod import Rod
+from src.core.disc import Disc
+from src.core.rod import Rod
 from typing import List, Tuple, Optional
 
 class Tower:
@@ -141,8 +141,11 @@ class Tower:
     
 
 if __name__ == "__main__":
-    tower_game = Tower()
-    print(tower_game)
-    print(f"starting state: {tower_game.current_state}")
-    print(f"terminal state: {tower_game.terminal_state}")
-    print(f"valid moves: {tower_game.get_valid_moves()}")
+    # TODO: remove this script and replace with unit test
+    tower = Tower()
+    print(tower)
+    print(f"starting state: {tower.current_state}")
+    print(f"terminal state: {tower.terminal_state}")
+    print(f"valid moves: {tower.get_valid_moves()}")
+    tower.reset()
+    print(f"state after reset: {tower.current_state}")

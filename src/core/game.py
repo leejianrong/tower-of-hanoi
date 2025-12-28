@@ -4,7 +4,7 @@ import os
 from typing import Tuple
 from datetime import datetime
 from pathlib import Path
-from tower import Tower
+from src.core.tower import Tower
 
 
 class Game:
@@ -17,7 +17,7 @@ class Game:
         self.tower = Tower()
         self.history = []
 
-        parent_dir = Path(__file__).resolve().parent.parent
+        parent_dir = Path(__file__).resolve().parent.parent.parent
         save_dir = os.path.join(parent_dir, "records")
         os.makedirs(save_dir, exist_ok=True)
         self.json_filepath = os.path.join(save_dir, json_filename)
