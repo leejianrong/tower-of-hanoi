@@ -4,6 +4,9 @@ from color import Color, DISC_ID_TO_COLOR
 
 logger = logging.getLogger(__name__)
 
+Y_COORD_LATERAL_MOVEMENT = 100
+MOVEMENT_SPEED = 35
+
 class Disc:
     def __init__(
         self, 
@@ -14,7 +17,7 @@ class Disc:
         color: Color, 
         id: int,
         label_color: pygame.Color = Color.PASTEL_WHITE.value,
-        movement_speed: int = 10
+        movement_speed: int = MOVEMENT_SPEED
     ) -> None:
         
         self.surf: pygame.Surface = pygame.Surface((width, height))
@@ -23,10 +26,12 @@ class Disc:
         self.rect: pygame.Rect = self.surf.get_rect()
         self.rect.center = (center_x, center_y)
 
-        # Target coordinates to track where disc is going
+        # Original and target coordinates to handle disc movement and pathing
+        self.source_x = center_x
+        self.source_y = center_y
         self.target_x = center_x
         self.target_y = center_y
-        self.speed: int = movement_speed
+        self.speed = movement_speed
 
         label_font = pygame.font.SysFont(None, 16)
         label_surf = label_font.render(str(id), True, label_color)
@@ -38,27 +43,46 @@ class Disc:
         self.target_x = x
         self.target_y = y
 
+    def get_new_coord(self, current, target, step):
+        if current < target:
+            new_coord = min(current + step, target)
+        elif current > target:
+            new_coord = max(current - step, target)
+        else:
+            new_coord = current
+        return new_coord
+
     def update(self):
         """Move the disc incrementally towards its target position each frame"""
+        if self.rect.center == (self.target_x, self.target_y):
+            return
+        
         curr_x, curr_y = self.rect.center
 
-        # Move X towards target
-        if curr_x < self.target_x:
-            new_x = min(curr_x + self.speed, self.target_x)
-        elif curr_x > self.target_x:
-            new_x = max(curr_x - self.speed, self.target_x)
-        else:
-            new_x = curr_x
-        
-        # Move Y towards target
-        if curr_y < self.target_y:
-            new_y = min(curr_y + self.speed, self.target_y)
-        elif curr_y > self.target_y:
-            new_y = max(curr_y - self.speed, self.target_y)
+        # Handle upward movement to move disc up and out of original rod
+        if curr_x == self.source_x and curr_y > Y_COORD_LATERAL_MOVEMENT:
+            new_y = self.get_new_coord(curr_y, Y_COORD_LATERAL_MOVEMENT, self.speed)
+
+        # Handle downward movement to move disc down and into target rod
+        elif curr_x == self.target_x and curr_y <= self.target_y:
+            new_y = self.get_new_coord(curr_y, self.target_y, self.speed)
         else:
             new_y = curr_y
 
+        # Handle lateral movement when disc is above rods
+        if curr_y <= Y_COORD_LATERAL_MOVEMENT:
+            new_x = self.get_new_coord(curr_x, self.target_x, self.speed)
+        else:
+            new_x = curr_x
+
         self.rect.center = (new_x, new_y)
+
+        # Update source coords when disc has stopped moving
+        if not self.is_moving:
+            self.source_x, self.source_y = self.rect.center
+
+        # new_x = self.get_new_coord(curr_x, self.target_x, self.speed)
+        # new_y = self.get_new_coord(curr_y, self.target_y, self.speed)
 
     @property
     def is_moving(self) -> bool:
