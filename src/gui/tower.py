@@ -1,8 +1,12 @@
+import logging
+
 from typing import Tuple
 from color import Color, DISC_ID_TO_COLOR
 from disc import Disc
 from rod import Rod
     
+logger = logging.getLogger(__name__)
+
 ROD_WIDTH = 30
 ROD_HEIGHT = 320
 DISC_STEP_Y = 50
@@ -21,11 +25,13 @@ class Tower:
         self.screen_height = screen_height
         self.num_rods = num_rods
         self.num_discs = num_discs
-        self.reset(start_state=START_STATE)
+        self.rods = {}
+        self.discs = {}
+        self.reset()
 
-    def reset(self, start_state):
+    def reset(self):
         self.reset_rods()
-        self.reset_discs(start_state)
+        self.reset_discs()
 
     def reset_rods(self):
         """Add rods as static objects to list of renderable objects during init."""
@@ -36,14 +42,14 @@ class Tower:
 
         for id, center_x in enumerate(range(start_x_pos, stop_x_pos, step_x)):
             center_y = self.screen_height // 2
-            print(f"adding rod at ({center_x}, {center_y}) of width={ROD_WIDTH}, height={ROD_HEIGHT}")
+            logger.debug(f"adding rod at ({center_x}, {center_y}) of width={ROD_WIDTH}, height={ROD_HEIGHT}")
             rod = Rod(center_x=center_x, center_y=center_y, width=ROD_WIDTH, height=ROD_HEIGHT, id=id)
             self.rods[id] = rod
 
-    def reset_discs(self, start_state: Tuple[Tuple[int]]):
+    def reset_discs(self):
         # Initialize the discs
         self.discs = {}
-        disc_positions = self.compute_disc_positions_from_state(start_state)
+        disc_positions = self.compute_disc_positions_from_state(game_state=START_STATE)
 
         for idx in range(self.num_discs):
             # create discs from largest (bottom) to smallest (top)
@@ -67,11 +73,11 @@ class Tower:
         for _, disc in self.discs.items():
             disc.render(surface)
 
-    def update(self, game_state: Tuple[Tuple[int]]):
-        desired_disc_positions = self.compute_disc_positions_from_state(game_state)
-        for disc_idx, disc in self.discs.items():
-            desired_x, desired_y = desired_disc_positions[disc_idx]
-            disc.set_target(desired_x, desired_y)
+    def update(self):
+        # desired_disc_positions = self.compute_disc_positions_from_state(game_state)
+        for disc in self.discs.values():
+            # desired_x, desired_y = desired_disc_positions[disc_idx]
+            # disc.set_target(desired_x, desired_y)
             disc.update()
 
     def compute_disc_positions_from_state(self, game_state: Tuple[Tuple[int]]) -> Tuple[Tuple[int]]:

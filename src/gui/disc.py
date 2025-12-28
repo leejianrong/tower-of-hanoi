@@ -1,6 +1,8 @@
 import pygame
+import logging
 from color import Color, DISC_ID_TO_COLOR
 
+logger = logging.getLogger(__name__)
 
 class Disc:
     def __init__(
@@ -12,7 +14,7 @@ class Disc:
         color: Color, 
         id: int,
         label_color: pygame.Color = Color.PASTEL_WHITE.value,
-        movement_speed: int = 5
+        movement_speed: int = 10
     ) -> None:
         
         self.surf: pygame.Surface = pygame.Surface((width, height))
@@ -58,6 +60,7 @@ class Disc:
 
         self.rect.center = (new_x, new_y)
 
+    @property
     def is_moving(self) -> bool:
         """Helper to check if the animation is finished"""
         return self.rect.center != (self.target_x, self.target_y)

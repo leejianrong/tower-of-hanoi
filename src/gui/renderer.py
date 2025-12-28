@@ -1,9 +1,22 @@
 import pygame
 import sys
+import json
+import os
+import logging
 
+from pathlib import Path
 from typing import Tuple
 from color import Color, DISC_ID_TO_COLOR
 from tower import Tower
+from replay import ReplayManager
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+logger = logging.getLogger(__name__)
+
 
 class Renderer:
     """
@@ -47,19 +60,21 @@ class Renderer:
         # Update the display to make the changes visible
         pygame.display.update() # or pygame.display.flip()
     
-    def update_all(self, game_state: Tuple[Tuple[int]]):
+    def update_all(self):
         """Call update() method for all updatable elements."""
         # For now, tower is the only updatable element
         # It encapsulates the rods and discs, of which discs are updatable
         for element in self.renderable_objects:
             if hasattr(element, "update"):
-                element.update(game_state)
+                element.update()
 
 
 if __name__ == "__main__":
     pygame.init()
     SCREEN_WIDTH = 1280
     SCREEN_HEIGHT = 720
+    RECORD_JSON = "record_2025_12_28_16_10_58.json"
+
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption("Tower of Hanoi")
 
@@ -72,16 +87,21 @@ if __name__ == "__main__":
         num_rods=3, 
         num_discs=5
     )
+    replay_manager = ReplayManager(tower_instance=tower, record_json=RECORD_JSON)
     renderer.add_element(tower)
 
     # Main game loop
     running = True
     clock = pygame.time.Clock()
+    move_idx = 0
 
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+
+        if not replay_manager.is_busy:
+            replay_manager.trigger_next_move()
 
         renderer.update_all() # game logic update
         renderer.render_all() # rendering
