@@ -51,7 +51,9 @@ Notes:
 
 ## Training (Q-learning)
 
-Runs a simple Q-learning loop and periodically writes checkpoints to `records/`.
+Runs a Q-learning loop and writes a complete training telemetry file to `records/`.
+The trainer records every episode and every explore/exploit decision with rewards,
+then stops early when the agent first solves the 5-disc puzzle in the optimal 31 moves.
 
 ```bash
 python train.py
@@ -59,8 +61,8 @@ python train.py
 
 Notes:
 - Training uses `TowerEnv` from `src/envs/tower_env.py`.
-- Checkpoints are written every 200 episodes as `records/qlearningagent_<episode>.json`.
-- These checkpoint files can be replayed with the Pygame renderer.
+- Telemetry is written as `records/qlearningagent_training.json`.
+- The existing Pygame renderer still replays legacy move-history JSON files.
 
 ## Project Layout
 

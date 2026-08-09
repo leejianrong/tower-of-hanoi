@@ -10,7 +10,7 @@ help:
 		'  make test          Run pytest' \
 		'  make compile       Compile Python files' \
 		'  make check         Run lint, test, and compile' \
-		'  make train         Train the Q-learning agent' \
+		'  make train         Train the Q-learning agent and write telemetry' \
 		'  make replay        Run the Pygame replay visualizer' \
 		'  make install-hooks Install the local pre-push hook'
 
