@@ -1,11 +1,11 @@
 import pygame
 import logging
-from color import Color, DISC_ID_TO_COLOR
+from color import Color
 
 logger = logging.getLogger(__name__)
 
 Y_COORD_LATERAL_MOVEMENT = 100
-MOVEMENT_SPEED = 35
+MOVEMENT_SPEED = 25
 
 class Disc:
     def __init__(

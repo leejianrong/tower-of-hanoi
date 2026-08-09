@@ -1,12 +1,8 @@
 import pygame
 import sys
-import json
-import os
 import logging
 
-from pathlib import Path
-from typing import Tuple
-from color import Color, DISC_ID_TO_COLOR
+from color import Color
 from tower import Tower
 from replay import ReplayManager
 
@@ -73,7 +69,7 @@ if __name__ == "__main__":
     pygame.init()
     SCREEN_WIDTH = 1280
     SCREEN_HEIGHT = 720
-    RECORD_JSON = "record_2025_12_28_16_10_58.json"
+    RECORD_JSON = "qlearningagent_799.json"
 
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption("Tower of Hanoi")

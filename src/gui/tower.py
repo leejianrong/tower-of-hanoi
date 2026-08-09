@@ -1,10 +1,10 @@
 import logging
 
 from typing import Tuple
-from color import Color, DISC_ID_TO_COLOR
+from color import DISC_ID_TO_COLOR
 from disc import Disc
 from rod import Rod
-    
+
 logger = logging.getLogger(__name__)
 
 ROD_WIDTH = 30
@@ -56,9 +56,9 @@ class Tower:
             disc_id = self.num_discs - idx - 1
             center_x, center_y = disc_positions[disc_id]
             width = DISC_BASE_WIDTH - DISC_WIDTH_DELTA * idx
-            
-            disc = Disc( 
-                center_x=center_x, 
+
+            disc = Disc(
+                center_x=center_x,
                 center_y=center_y,
                 width=width,
                 height=DISC_HEIGHT,
@@ -96,4 +96,4 @@ class Tower:
                 disc_positions[disc_idx] = (center_x, center_y)
 
         return tuple(disc_positions)
-            
+

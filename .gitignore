@@ -5,6 +5,19 @@ build/
 dist/
 wheels/
 *.egg-info
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
 # Virtual environments
 .venv
+
+# Local configuration and secrets
+.env
+.env.*
+
+# Generated training/replay outputs
+records/qlearningagent_*.json
+records/record_*.json
+!records/record_2025_12_28_16_10_58.json

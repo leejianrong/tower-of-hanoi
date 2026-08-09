@@ -1,7 +1,7 @@
 [project]
 name = "tower-of-hanoi"
 version = "0.1.0"
-description = "Add your description here"
+description = "Tower of Hanoi game logic, Gymnasium environment, Q-learning agent, and Pygame replay visualizer."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -15,3 +15,9 @@ dev = [
     "pytest>=9.0.2",
     "ruff>=0.14.10",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
