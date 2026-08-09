@@ -2,9 +2,14 @@ import pygame
 import sys
 import logging
 
-from color import Color
-from tower import Tower
-from replay import ReplayManager
+try:
+    from .color import Color
+    from .tower import Tower
+    from .replay import ReplayManager
+except ImportError:
+    from color import Color
+    from tower import Tower
+    from replay import ReplayManager
 
 logging.basicConfig(
     level=logging.DEBUG,

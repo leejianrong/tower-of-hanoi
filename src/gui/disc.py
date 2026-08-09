@@ -1,6 +1,10 @@
 import pygame
 import logging
-from color import Color
+
+try:
+    from .color import Color
+except ImportError:
+    from color import Color
 
 logger = logging.getLogger(__name__)
 

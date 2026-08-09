@@ -1,5 +1,9 @@
 import pygame
-from color import Color
+
+try:
+    from .color import Color
+except ImportError:
+    from color import Color
 
 class Rod:
     """Rod that will be rendered as a static object."""

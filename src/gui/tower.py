@@ -1,9 +1,15 @@
 import logging
 
 from typing import Tuple
-from color import DISC_ID_TO_COLOR
-from disc import Disc
-from rod import Rod
+
+try:
+    from .color import DISC_ID_TO_COLOR
+    from .disc import Disc
+    from .rod import Rod
+except ImportError:
+    from color import DISC_ID_TO_COLOR
+    from disc import Disc
+    from rod import Rod
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +20,6 @@ DISC_START_POS_Y = 495
 DISC_BASE_WIDTH = 270
 DISC_WIDTH_DELTA = 40
 DISC_HEIGHT = 50
-START_STATE = ((4, 3, 2, 1, 0), (), ())
 
 class Tower:
     """
@@ -25,6 +30,7 @@ class Tower:
         self.screen_height = screen_height
         self.num_rods = num_rods
         self.num_discs = num_discs
+        self.start_state = (tuple(range(self.num_discs - 1, -1, -1)), (), ())
         self.rods = {}
         self.discs = {}
         self.reset()
@@ -49,7 +55,7 @@ class Tower:
     def reset_discs(self):
         # Initialize the discs
         self.discs = {}
-        disc_positions = self.compute_disc_positions_from_state(game_state=START_STATE)
+        disc_positions = self.compute_disc_positions_from_state(game_state=self.start_state)
 
         for idx in range(self.num_discs):
             # create discs from largest (bottom) to smallest (top)
@@ -66,6 +72,16 @@ class Tower:
                 id=disc_id
             )
             self.discs[disc_id] = disc
+
+    def set_state(self, game_state: Tuple[Tuple[int]]) -> None:
+        disc_positions = self.compute_disc_positions_from_state(game_state=game_state)
+        for disc_id, (center_x, center_y) in enumerate(disc_positions):
+            disc = self.discs[disc_id]
+            disc.rect.center = (center_x, center_y)
+            disc.source_x = center_x
+            disc.source_y = center_y
+            disc.target_x = center_x
+            disc.target_y = center_y
 
     def render(self, surface):
         for _, rod in self.rods.items():
@@ -96,4 +112,3 @@ class Tower:
                 disc_positions[disc_idx] = (center_x, center_y)
 
         return tuple(disc_positions)
-
