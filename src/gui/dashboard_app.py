@@ -59,7 +59,7 @@ def main() -> None:
             active_animation_duration = controller.step_duration_seconds
 
         if controller.playing:
-            dashboard.update_animation()
+            dashboard.update_animation(elapsed_seconds)
         controller.update(elapsed_seconds, animation_complete=dashboard.animation_complete)
 
         if active_timeline_index != controller.current_index:

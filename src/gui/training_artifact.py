@@ -18,6 +18,10 @@ class DashboardStep:
     target_rod_idx: int
     disc_id: int
     reward: float
+    terminated: bool
+    truncated: bool
+    episode_solved: bool
+    episode_optimal: bool
     state: tuple[tuple[int, ...], ...]
     next_state: tuple[tuple[int, ...], ...]
     q_values_before: tuple[float, ...]
@@ -80,6 +84,10 @@ class TrainingArtifact:
             target_rod_idx=int(step["target_rod_idx"]),
             disc_id=int(step["disc_id"]),
             reward=float(step["reward"]),
+            terminated=bool(step.get("terminated", False)),
+            truncated=bool(step.get("truncated", False)),
+            episode_solved=bool(episode.get("solved", False)),
+            episode_optimal=bool(episode.get("optimal", False)),
             state=state_from_json(step["state"]),
             next_state=state_from_json(step["next_state"]),
             q_values_before=tuple(float(value) for value in step["q_values_before"]),

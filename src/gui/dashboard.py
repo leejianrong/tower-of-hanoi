@@ -40,6 +40,8 @@ class Dashboard:
         )
         self.current_step = artifact.get_step(episode_index=-1, step_index=0)
         self._animated_disc_id: int | None = None
+        self._animation_duration_seconds = 1.0
+        self._animation_elapsed_seconds = 0.0
 
     @property
     def animation_complete(self) -> bool:
@@ -58,9 +60,39 @@ class Dashboard:
             return "CROSS"
         return "SET"
 
+    @property
+    def animation_progress(self) -> float:
+        return min(self._animation_elapsed_seconds / self._animation_duration_seconds, 1.0)
+
+    @property
+    def action_progress(self) -> float:
+        """Map the disc's lift-slide-drop position onto its action-path arrow."""
+        if self._animated_disc_id is None:
+            return 1.0
+        disc = self.tower.discs[self._animated_disc_id]
+        if not disc.is_moving:
+            return 1.0
+        source_x, source_y = disc.source_x, disc.source_y
+        target_x, target_y = disc.target_x, disc.target_y
+        if disc.rect.centerx == source_x:
+            lift_distance = max(source_y - Y_COORD_LATERAL_MOVEMENT, 1)
+            return 0.16 * (source_y - disc.rect.centery) / lift_distance
+        if disc.rect.centerx != target_x:
+            cross_distance = max(abs(target_x - source_x), 1)
+            return 0.16 + 0.68 * abs(disc.rect.centerx - source_x) / cross_distance
+        set_distance = max(target_y - Y_COORD_LATERAL_MOVEMENT, 1)
+        return 0.84 + 0.16 * (disc.rect.centery - Y_COORD_LATERAL_MOVEMENT) / set_distance
+
+    @property
+    def feedback_pulse(self) -> float:
+        """A deterministic early-step pulse for Q and reward feedback."""
+        return math.sin(math.pi * min(self.animation_progress / 0.45, 1.0))
+
     def start_step_animation(self, step: DashboardStep, duration_seconds: float) -> None:
         """Place a step at its source state and prepare its moved disc to travel."""
         self.current_step = step
+        self._animation_duration_seconds = max(duration_seconds, 1 / 240)
+        self._animation_elapsed_seconds = 0.0
         self.tower.set_state(step.state)
         target_x, target_y = self.tower.compute_disc_positions_from_state(step.next_state)[step.disc_id]
         disc = self.tower.discs[step.disc_id]
@@ -68,12 +100,14 @@ class Dashboard:
         disc.speed = self._animation_speed(disc, duration_seconds)
         self._animated_disc_id = step.disc_id
 
-    def update_animation(self) -> None:
+    def update_animation(self, elapsed_seconds: float = 1 / 60) -> None:
+        self._animation_elapsed_seconds += max(0.0, elapsed_seconds)
         if not self.animation_complete:
             self.tower.update()
 
     def set_animation_duration(self, duration_seconds: float) -> None:
         """Retiming an active move keeps the speed controls visually responsive."""
+        self._animation_duration_seconds = max(duration_seconds, 1 / 240)
         if not self.animation_complete:
             disc = self.tower.discs[self._animated_disc_id]
             disc.speed = self._animation_speed(disc, duration_seconds)
@@ -111,6 +145,8 @@ class Dashboard:
         self._render_heatmap(step)
         self._render_epsilon_gauge(step)
         self._render_reward_badge(step)
+        self._render_episode_context(step)
+        self._render_solve_celebration(step)
         pygame.display.flip()
 
     def _render_header(
@@ -161,16 +197,18 @@ class Dashboard:
         source_x = self.tower.rods[step.source_rod_idx].rect.centerx
         target_x = self.tower.rods[step.target_rod_idx].rect.centerx
         y = 92
-        pygame.draw.line(self.screen, Color.INCHWORM.value, (source_x, y), (target_x, y), 4)
+        pygame.draw.line(self.screen, Color.LIGHT_GRAY.value, (source_x, y), (target_x, y), 2)
+        arrow_x = round(source_x + (target_x - source_x) * self.action_progress)
+        pygame.draw.line(self.screen, Color.INCHWORM.value, (source_x, y), (arrow_x, y), 4)
         direction = 1 if target_x >= source_x else -1
-        arrow_tip = (target_x, y)
+        arrow_tip = (arrow_x, y)
         pygame.draw.polygon(
             self.screen,
             Color.INCHWORM.value,
             [
                 arrow_tip,
-                (target_x - direction * 14, y - 8),
-                (target_x - direction * 14, y + 8),
+                (arrow_x - direction * 14, y - 8),
+                (arrow_x - direction * 14, y + 8),
             ],
         )
 
@@ -187,12 +225,13 @@ class Dashboard:
         q_after = step.q_values_after[step.action]
         q_delta = q_after - q_before
         delta_color = Color.INCHWORM.value if q_delta >= 0 else pygame.Color("#d96c6c")
+        label_y = PANEL_Y - 40 - round(self.feedback_pulse * 4)
         update_label = self.small_font.render(
             f"Q(a) {q_before:.2f} → {q_after:.2f}  ({q_delta:+.2f})",
             True,
             delta_color,
         )
-        self.screen.blit(update_label, (PANEL_X + 250, PANEL_Y - 40))
+        self.screen.blit(update_label, (PANEL_X + 250, label_y))
 
         q_table = step.q_table
         if not q_table:
@@ -219,6 +258,10 @@ class Dashboard:
                 pygame.draw.rect(self.screen, self._heat_color(value, max_abs), rect)
                 if is_current_state and col_idx == step.action:
                     pygame.draw.rect(self.screen, Color.INCHWORM.value, rect, width=3)
+                    if self.feedback_pulse:
+                        flash_color = Color.INCHWORM.value if q_delta >= 0 else pygame.Color("#d96c6c")
+                        flash = rect.inflate(round(self.feedback_pulse * 8), round(self.feedback_pulse * 8))
+                        pygame.draw.rect(self.screen, flash_color, flash, width=2)
                 elif is_current_state:
                     pygame.draw.rect(self.screen, pygame.Color("#222222"), rect, width=1)
 
@@ -270,11 +313,96 @@ class Dashboard:
         x = PANEL_X + 300
         y = 622
         color = Color.PASTEL_AMBER.value if step.reward > 0 else pygame.Color("#d96c6c")
-        pygame.draw.circle(self.screen, color, (x, y + 28), 28)
+        pulse = self.feedback_pulse
+        radius = 28 + round(pulse * 6)
+        center = (x, y + 28)
+        pygame.draw.circle(self.screen, color, center, radius)
+        pygame.draw.circle(self.screen, pygame.Color("#ffffff"), center, radius, width=2)
+        if step.reward > 0:
+            pygame.draw.circle(self.screen, pygame.Color("#fff0bd"), center, max(8, radius - 12), width=2)
+        else:
+            tick_radius = radius + 10 + round(pulse * 6)
+            for angle in (-2.3, -1.57, -0.84):
+                start = (
+                    x + round(math.cos(angle) * tick_radius),
+                    y + 28 + round(math.sin(angle) * tick_radius),
+                )
+                end = (
+                    x + round(math.cos(angle) * (tick_radius + 7)),
+                    y + 28 + round(math.sin(angle) * (tick_radius + 7)),
+                )
+                pygame.draw.line(self.screen, color, start, end, 3)
         reward_text = self.font.render(f"{step.reward:+.0f}", True, pygame.Color("#ffffff"))
-        self.screen.blit(reward_text, reward_text.get_rect(center=(x, y + 28)))
+        self.screen.blit(reward_text, reward_text.get_rect(center=center))
         total = self.small_font.render(f"episode reward {step.total_reward:.0f}", True, self.text_color)
         self.screen.blit(total, (x + 44, y + 20))
+
+    def _render_episode_context(self, step: DashboardStep) -> None:
+        x, y, width, height = 500, 570, 210, 112
+        pygame.draw.rect(
+            self.screen,
+            pygame.Color("#ffffff"),
+            pygame.Rect(x, y, width, height),
+            border_radius=6,
+        )
+        heading = self.small_font.render(f"EPISODE {step.episode_number}", True, self.text_color)
+        self.screen.blit(heading, (x + 12, y + 10))
+        status = "IN PROGRESS"
+        if step.terminated and step.episode_optimal:
+            status = "OPTIMAL SOLVE"
+        elif step.terminated and step.episode_solved:
+            status = "SOLVED"
+        elif step.truncated:
+            status = "TRUNCATED"
+        summary = self.small_font.render(
+            f"{status}  ·  {step.step_count} moves  ·  {step.total_reward:.0f} reward",
+            True,
+            self.text_color,
+        )
+        self.screen.blit(summary, (x + 12, y + 30))
+        self._render_learning_curve(x + 12, y + 58, width - 24, 40, step)
+
+    def _render_learning_curve(
+        self,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        step: DashboardStep,
+    ) -> None:
+        rewards = [float(episode["total_reward"]) for episode in self.artifact.data["episodes"]]
+        history = rewards[:step.episode_number][-16:]
+        if not history:
+            return
+        minimum, maximum = min(history), max(history)
+        if minimum == maximum:
+            minimum -= 1
+            maximum += 1
+        points = [
+            (
+                x + round(index * width / max(len(history) - 1, 1)),
+                y + height - round((reward - minimum) * height / (maximum - minimum)),
+            )
+            for index, reward in enumerate(history)
+        ]
+        pygame.draw.line(self.screen, Color.LIGHT_GRAY.value, (x, y + height), (x + width, y + height), 1)
+        if len(points) == 1:
+            pygame.draw.circle(self.screen, Color.INCHWORM.value, points[0], 3)
+        else:
+            pygame.draw.lines(self.screen, Color.INCHWORM.value, False, points, 2)
+            pygame.draw.circle(self.screen, Color.PASTEL_AMBER.value, points[-1], 4)
+
+    def _render_solve_celebration(self, step: DashboardStep) -> None:
+        if not (step.terminated and step.episode_optimal):
+            return
+        rect = pygame.Rect(48, 132, 360, 42)
+        pygame.draw.rect(self.screen, Color.PASTEL_LIME.value, rect, border_radius=8)
+        message = self.font.render("OPTIMAL SOLVE · 31 MOVES", True, self.text_color)
+        self.screen.blit(message, message.get_rect(center=rect.center))
+        for index in range(7):
+            confetti_x = 428 + index * 28
+            confetti_y = 140 + (index % 3) * 12
+            pygame.draw.circle(self.screen, Color.PASTEL_AMBER.value, (confetti_x, confetti_y), 4)
 
 
 def render_dashboard_frame(

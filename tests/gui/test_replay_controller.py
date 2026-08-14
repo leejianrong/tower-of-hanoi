@@ -88,3 +88,14 @@ def test_replay_controller_waits_for_disc_animation_before_advancing():
     controller.update(0, animation_complete=True)
     assert controller.progress == (2, 3)
     assert controller.animation_progress == 0.0
+
+
+def test_replay_controller_compresses_penalties_and_slows_episode_end():
+    artifact = make_artifact()
+    artifact.data["episodes"][0]["steps"][0]["reward"] = -1
+    controller = TrainingReplayController(artifact, steps_per_second=2)
+
+    assert controller.step_duration_seconds == 0.175
+
+    controller.next_step()
+    assert controller.step_duration_seconds == 1.0

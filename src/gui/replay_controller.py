@@ -43,12 +43,26 @@ class TrainingReplayController:
 
     @property
     def step_duration_seconds(self) -> float:
+        """Return the paced duration for the telemetry item on screen."""
+        return self.base_step_duration_seconds * self._duration_multiplier(self.current_step)
+
+    @property
+    def base_step_duration_seconds(self) -> float:
         return 1.0 / self.steps_per_second
 
     @property
     def animation_progress(self) -> float:
         """Return the elapsed fraction of the current step's display time."""
         return min(self._animation_elapsed_seconds / self.step_duration_seconds, 1.0)
+
+    @staticmethod
+    def _duration_multiplier(step: DashboardStep) -> float:
+        """Keep terminal transitions legible while compressing routine penalties."""
+        if step.step_number == step.step_count:
+            return 2.0
+        if step.reward < 0:
+            return 0.35
+        return 1.0
 
     def toggle_playing(self) -> None:
         self.playing = not self.playing

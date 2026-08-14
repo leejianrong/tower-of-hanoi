@@ -96,10 +96,12 @@ def test_dashboard_animates_only_the_telemetry_move(tmp_path):
     assert not dashboard.tower.discs[1].is_moving
     assert not dashboard.animation_complete
     assert dashboard.animation_phase == "LIFT"
+    assert dashboard.action_progress == 0.0
 
     while dashboard.tower.discs[0].rect.centery > 100:
         dashboard.update_animation()
     assert dashboard.animation_phase == "CROSS"
+    assert 0 < dashboard.action_progress < 1
 
     while dashboard.tower.discs[0].rect.centerx != 450:
         dashboard.update_animation()
@@ -109,6 +111,7 @@ def test_dashboard_animates_only_the_telemetry_move(tmp_path):
         dashboard.update_animation()
 
     assert dashboard.animation_complete
+    assert dashboard.action_progress == 1.0
     assert dashboard.tower.discs[0].rect.center == (450, 495)
     assert dashboard.tower.discs[1].rect.center == (90, 495)
     pygame.quit()
