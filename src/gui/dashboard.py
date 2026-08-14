@@ -30,9 +30,9 @@ class Dashboard:
         self.artifact = artifact
         self.background_color = Color.PASTEL_WHITE.value
         self.text_color = Color.DAVYS_GREY.value
-        self.font = pygame.font.SysFont(None, 24)
-        self.small_font = pygame.font.SysFont(None, 18)
-        self.title_font = pygame.font.SysFont(None, 32)
+        self.font = pygame.font.Font(None, 24)
+        self.small_font = pygame.font.Font(None, 18)
+        self.title_font = pygame.font.Font(None, 32)
         self.tower = Tower(
             screen_width=BOARD_WIDTH,
             screen_height=SCREEN_HEIGHT,

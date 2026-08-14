@@ -1,3 +1,5 @@
+import os
+import signal
 from pathlib import Path
 
 import pygame
@@ -27,55 +29,81 @@ def main() -> None:
     clock = pygame.time.Clock()
 
     running = True
-    while running:
-        elapsed_seconds = clock.tick(60) / 1000
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_ESCAPE, pygame.K_q):
+
+    def request_shutdown(_signum, _frame) -> None:
+        nonlocal running
+        running = False
+
+    signal.signal(signal.SIGINT, request_shutdown)
+    signal.signal(signal.SIGTERM, request_shutdown)
+    dashboard.render_step(
+        controller.current_step,
+        timeline_progress=controller.progress,
+        playing=controller.playing,
+        speed=controller.steps_per_second,
+        animated=True,
+    )
+
+    try:
+        while running:
+            elapsed_seconds = clock.tick(60) / 1000
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
                     running = False
-                elif event.key == pygame.K_SPACE:
-                    controller.toggle_playing()
-                elif event.key == pygame.K_RIGHT:
-                    controller.next_step()
-                elif event.key == pygame.K_LEFT:
-                    controller.previous_step()
-                elif event.key in (pygame.K_EQUALS, pygame.K_PLUS):
-                    controller.speed_up()
-                elif event.key == pygame.K_MINUS:
-                    controller.slow_down()
-                elif event.key == pygame.K_PAGEUP:
-                    controller.jump_episode(1)
-                elif event.key == pygame.K_PAGEDOWN:
-                    controller.jump_episode(-1)
+                elif event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_ESCAPE, pygame.K_q):
+                        running = False
+                    elif event.key == pygame.K_SPACE:
+                        controller.toggle_playing()
+                    elif event.key == pygame.K_RIGHT:
+                        controller.next_step()
+                    elif event.key == pygame.K_LEFT:
+                        controller.previous_step()
+                    elif event.key in (pygame.K_EQUALS, pygame.K_PLUS):
+                        controller.speed_up()
+                    elif event.key == pygame.K_MINUS:
+                        controller.slow_down()
+                    elif event.key == pygame.K_PAGEUP:
+                        controller.jump_episode(1)
+                    elif event.key == pygame.K_PAGEDOWN:
+                        controller.jump_episode(-1)
 
-        if active_timeline_index != controller.current_index:
-            dashboard.start_step_animation(controller.current_step, controller.step_duration_seconds)
-            active_timeline_index = controller.current_index
-            active_animation_duration = controller.step_duration_seconds
-        elif active_animation_duration != controller.step_duration_seconds:
-            dashboard.set_animation_duration(controller.step_duration_seconds)
-            active_animation_duration = controller.step_duration_seconds
+            if active_timeline_index != controller.current_index:
+                dashboard.start_step_animation(controller.current_step, controller.step_duration_seconds)
+                active_timeline_index = controller.current_index
+                active_animation_duration = controller.step_duration_seconds
+            elif active_animation_duration != controller.step_duration_seconds:
+                dashboard.set_animation_duration(controller.step_duration_seconds)
+                active_animation_duration = controller.step_duration_seconds
 
-        if controller.playing:
-            dashboard.update_animation(elapsed_seconds)
-        controller.update(elapsed_seconds, animation_complete=dashboard.animation_complete)
+            if controller.playing:
+                dashboard.update_animation(elapsed_seconds)
+            controller.update(elapsed_seconds, animation_complete=dashboard.animation_complete)
 
-        if active_timeline_index != controller.current_index:
-            dashboard.start_step_animation(controller.current_step, controller.step_duration_seconds)
-            active_timeline_index = controller.current_index
-            active_animation_duration = controller.step_duration_seconds
+            if active_timeline_index != controller.current_index:
+                dashboard.start_step_animation(controller.current_step, controller.step_duration_seconds)
+                active_timeline_index = controller.current_index
+                active_animation_duration = controller.step_duration_seconds
 
-        dashboard.render_step(
-            controller.current_step,
-            timeline_progress=controller.progress,
-            playing=controller.playing,
-            speed=controller.steps_per_second,
-            animated=True,
-        )
+            dashboard.render_step(
+                controller.current_step,
+                timeline_progress=controller.progress,
+                playing=controller.playing,
+                speed=controller.steps_per_second,
+                animated=True,
+            )
+    finally:
+        pygame.quit()
+        _remove_pid_file()
 
-    pygame.quit()
+
+def _remove_pid_file() -> None:
+    pid_path = os.environ.get("REPLAY_PID_FILE")
+    if not pid_path:
+        return
+    path = Path(pid_path)
+    if path.exists() and path.read_text().strip() == str(os.getpid()):
+        path.unlink()
 
 
 if __name__ == "__main__":

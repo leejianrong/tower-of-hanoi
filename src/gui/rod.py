@@ -22,7 +22,7 @@ class Rod:
         self.rect: pygame.Rect = self.surf.get_rect()
         self.rect.center = (center_x, center_y)
 
-        label_font = pygame.font.SysFont(None, 24)
+        label_font = pygame.font.Font(None, 24)
         self.label_surf = label_font.render(str(id), True, label_color)
         # Lock the top-center of the text to the bottom-center of the rod
         # Add a small y-offset (e.g., +30) for spacing

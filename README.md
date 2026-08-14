@@ -51,6 +51,8 @@ Notes:
 - To render one dashboard frame headlessly, run `make dashboard-frame`.
 - To render a deterministic in-motion replay frame headlessly, run
   `make dashboard-animation-frame`.
+- To start the interactive replay, run `make replay`; close it with
+  `make replay-stop`, and inspect startup errors with `make replay-log`.
 
 ## Training (Q-learning)
 

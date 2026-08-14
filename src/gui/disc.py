@@ -37,7 +37,7 @@ class Disc:
         self.target_y = center_y
         self.speed = movement_speed
 
-        label_font = pygame.font.SysFont(None, 16)
+        label_font = pygame.font.Font(None, 16)
         label_surf = label_font.render(str(id), True, label_color)
         label_rect = label_surf.get_rect(center=(width - 15, height - 15))
         self.surf.blit(label_surf, label_rect)
