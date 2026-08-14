@@ -47,6 +47,15 @@ class TrainingArtifact:
     def episode_count(self) -> int:
         return len(self.data["episodes"])
 
+    @property
+    def step_count(self) -> int:
+        return sum(len(episode["steps"]) for episode in self.data["episodes"])
+
+    def iter_steps(self):
+        for episode_index, episode in enumerate(self.data["episodes"]):
+            for step_index, _ in enumerate(episode["steps"]):
+                yield episode_index, step_index, self.get_step(episode_index, step_index)
+
     def get_step(self, episode_index: int = -1, step_index: int = 0) -> DashboardStep:
         episode = self.data["episodes"][episode_index]
         steps = episode["steps"]

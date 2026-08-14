@@ -34,18 +34,32 @@ class Dashboard:
         self.tower = Tower(screen_width=BOARD_WIDTH, screen_height=SCREEN_HEIGHT)
         self.current_step = artifact.get_step(episode_index=-1, step_index=0)
 
-    def render_step(self, step: DashboardStep) -> None:
+    def render_step(
+        self,
+        step: DashboardStep,
+        *,
+        timeline_progress: tuple[int, int] | None = None,
+        playing: bool | None = None,
+        speed: float | None = None,
+    ) -> None:
         self.current_step = step
         self.tower.set_state(step.state)
         self.screen.fill(self.background_color)
-        self._render_header(step)
+        self._render_header(step, timeline_progress=timeline_progress, playing=playing, speed=speed)
         self._render_board_region(step)
         self._render_heatmap(step)
         self._render_epsilon_gauge(step)
         self._render_reward_badge(step)
         pygame.display.flip()
 
-    def _render_header(self, step: DashboardStep) -> None:
+    def _render_header(
+        self,
+        step: DashboardStep,
+        *,
+        timeline_progress: tuple[int, int] | None = None,
+        playing: bool | None = None,
+        speed: float | None = None,
+    ) -> None:
         title = self.title_font.render("Tower of Hanoi Q-Learning", True, self.text_color)
         self.screen.blit(title, (48, 28))
         subtitle = (
@@ -54,6 +68,12 @@ class Dashboard:
             f"Action {step.action}: {step.source_rod_idx}->{step.target_rod_idx}"
         )
         self.screen.blit(self.font.render(subtitle, True, self.text_color), (48, 58))
+        if timeline_progress is not None:
+            current, total = timeline_progress
+            state = "PLAY" if playing else "PAUSE"
+            speed_text = f"{speed:.1f} steps/s" if speed is not None else ""
+            timeline = f"{state}  Timeline {current}/{total}  {speed_text}"
+            self.screen.blit(self.small_font.render(timeline, True, self.text_color), (48, 84))
 
     def _render_board_region(self, step: DashboardStep) -> None:
         self.tower.render(self.screen)
