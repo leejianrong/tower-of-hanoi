@@ -295,3 +295,35 @@ def render_dashboard_frame(
     pygame.image.save(screen, output)
     pygame.quit()
     return output
+
+
+def render_dashboard_animation_frame(
+    artifact_path: str | Path,
+    output_path: str | Path,
+    *,
+    episode_index: int = -1,
+    step_index: int = 0,
+    animation_frame: int = 0,
+    steps_per_second: float = 8.0,
+    size: tuple[int, int] = (SCREEN_WIDTH, SCREEN_HEIGHT),
+) -> Path:
+    """Render one deterministic lift-slide-drop frame for a telemetry step."""
+    if animation_frame < 0:
+        raise ValueError("animation_frame must be non-negative.")
+    if steps_per_second <= 0:
+        raise ValueError("steps_per_second must be positive.")
+
+    pygame.init()
+    screen = pygame.display.set_mode(size)
+    artifact = TrainingArtifact.load(artifact_path)
+    dashboard = Dashboard(screen, artifact)
+    step = artifact.get_step(episode_index=episode_index, step_index=step_index)
+    dashboard.start_step_animation(step, duration_seconds=1 / steps_per_second)
+    for _ in range(animation_frame):
+        dashboard.update_animation()
+    dashboard.render_step(step, speed=steps_per_second, animated=True)
+    output = Path(output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    pygame.image.save(screen, output)
+    pygame.quit()
+    return output

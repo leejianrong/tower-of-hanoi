@@ -49,6 +49,8 @@ Notes:
 - Run `python train.py` first if `records/qlearningagent_training.json` does not exist.
 - The legacy move-history renderer still exists in `src/gui/renderer.py`.
 - To render one dashboard frame headlessly, run `make dashboard-frame`.
+- To render a deterministic in-motion replay frame headlessly, run
+  `make dashboard-animation-frame`.
 
 ## Training (Q-learning)
 

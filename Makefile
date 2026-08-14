@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help sync lint test compile check train replay dashboard-frame install-hooks
+.PHONY: help sync lint test compile check train replay dashboard-frame dashboard-animation-frame install-hooks
 
 help:
 	@printf '%s\n' \
@@ -13,6 +13,7 @@ help:
 		'  make train         Train the Q-learning agent and write telemetry' \
 		'  make replay        Run the Pygame telemetry dashboard' \
 		'  make dashboard-frame Render one dashboard frame to /tmp' \
+		'  make dashboard-animation-frame Render one animation frame to /tmp' \
 		'  make install-hooks Install the local pre-push hook'
 
 sync:
@@ -37,6 +38,9 @@ replay:
 
 dashboard-frame:
 	SDL_VIDEODRIVER=dummy uv run python -c 'from src.gui.dashboard import render_dashboard_frame; render_dashboard_frame("records/qlearningagent_training.json", "/tmp/tower_dashboard_frame.png"); print("/tmp/tower_dashboard_frame.png")'
+
+dashboard-animation-frame:
+	SDL_VIDEODRIVER=dummy uv run python -c 'from src.gui.dashboard import render_dashboard_animation_frame; render_dashboard_animation_frame("records/qlearningagent_training.json", "/tmp/tower_dashboard_animation_frame.png", animation_frame=1); print("/tmp/tower_dashboard_animation_frame.png")'
 
 install-hooks:
 	cp scripts/hooks/pre-push .git/hooks/pre-push

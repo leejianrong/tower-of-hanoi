@@ -6,7 +6,11 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from src.gui.dashboard import Dashboard, render_dashboard_frame
+from src.gui.dashboard import (
+    Dashboard,
+    render_dashboard_animation_frame,
+    render_dashboard_frame,
+)
 from src.gui.training_artifact import TrainingArtifact
 
 
@@ -108,3 +112,39 @@ def test_dashboard_animates_only_the_telemetry_move(tmp_path):
     assert dashboard.tower.discs[0].rect.center == (450, 495)
     assert dashboard.tower.discs[1].rect.center == (90, 495)
     pygame.quit()
+
+
+def test_render_dashboard_animation_frame_is_deterministic(tmp_path):
+    artifact_path = tmp_path / "training.json"
+    output_one = tmp_path / "animation-one.png"
+    output_two = tmp_path / "animation-two.png"
+    artifact_path.write_text(json.dumps({
+        "schema_version": 1,
+        "config": {"num_discs": 1},
+        "summary": {},
+        "episodes": [{
+            "episode_number": 1,
+            "total_reward": 100,
+            "step_count": 1,
+            "steps": [{
+                "step_index": 0,
+                "state": [[0], [], []],
+                "next_state": [[], [], [0]],
+                "action": 1,
+                "decision_mode": "explore",
+                "epsilon": 1.0,
+                "source_rod_idx": 0,
+                "target_rod_idx": 2,
+                "disc_id": 0,
+                "reward": 100,
+                "q_values_before": [0, 0, 0, 0, 0, 0],
+                "q_values_after": [0, 50, 0, 0, 0, 0],
+            }],
+            "q_table": [{"state": [[0], [], []], "values": [0, 50, 0, 0, 0, 0]}],
+        }],
+    }))
+
+    render_dashboard_animation_frame(artifact_path, output_one, animation_frame=1)
+    render_dashboard_animation_frame(artifact_path, output_two, animation_frame=1)
+
+    assert output_one.read_bytes() == output_two.read_bytes()
