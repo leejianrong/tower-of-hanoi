@@ -3,7 +3,11 @@ import json
 import logging
 
 from pathlib import Path
-from tower import Tower
+
+try:
+    from .tower import Tower
+except ImportError:
+    from tower import Tower
 
 logger = logging.getLogger(__name__)
 
