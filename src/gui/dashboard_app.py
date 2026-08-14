@@ -21,6 +21,9 @@ def main() -> None:
     pygame.display.set_caption("Tower of Hanoi RL Visualizer")
     dashboard = Dashboard(screen, artifact)
     controller = TrainingReplayController(artifact)
+    dashboard.start_step_animation(controller.current_step, controller.step_duration_seconds)
+    active_timeline_index = controller.current_index
+    active_animation_duration = controller.step_duration_seconds
     clock = pygame.time.Clock()
 
     running = True
@@ -47,12 +50,29 @@ def main() -> None:
                 elif event.key == pygame.K_PAGEDOWN:
                     controller.jump_episode(-1)
 
-        controller.update(elapsed_seconds)
+        if active_timeline_index != controller.current_index:
+            dashboard.start_step_animation(controller.current_step, controller.step_duration_seconds)
+            active_timeline_index = controller.current_index
+            active_animation_duration = controller.step_duration_seconds
+        elif active_animation_duration != controller.step_duration_seconds:
+            dashboard.set_animation_duration(controller.step_duration_seconds)
+            active_animation_duration = controller.step_duration_seconds
+
+        if controller.playing:
+            dashboard.update_animation()
+        controller.update(elapsed_seconds, animation_complete=dashboard.animation_complete)
+
+        if active_timeline_index != controller.current_index:
+            dashboard.start_step_animation(controller.current_step, controller.step_duration_seconds)
+            active_timeline_index = controller.current_index
+            active_animation_duration = controller.step_duration_seconds
+
         dashboard.render_step(
             controller.current_step,
             timeline_progress=controller.progress,
             playing=controller.playing,
             speed=controller.steps_per_second,
+            animated=True,
         )
 
     pygame.quit()

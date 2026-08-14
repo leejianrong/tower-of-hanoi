@@ -76,3 +76,15 @@ def test_replay_controller_can_pause_and_change_speed():
     assert controller.steps_per_second == 8
     controller.slow_down()
     assert controller.steps_per_second == 4
+
+
+def test_replay_controller_waits_for_disc_animation_before_advancing():
+    controller = TrainingReplayController(make_artifact(), steps_per_second=2)
+
+    controller.update(0.5, animation_complete=False)
+    assert controller.progress == (1, 3)
+    assert controller.animation_progress == 1.0
+
+    controller.update(0, animation_complete=True)
+    assert controller.progress == (2, 3)
+    assert controller.animation_progress == 0.0

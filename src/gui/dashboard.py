@@ -5,10 +5,12 @@ import pygame
 
 try:
     from .color import Color
+    from .disc import Y_COORD_LATERAL_MOVEMENT
     from .tower import Tower
     from .training_artifact import DashboardStep, TrainingArtifact
 except ImportError:
     from color import Color
+    from disc import Y_COORD_LATERAL_MOVEMENT
     from tower import Tower
     from training_artifact import DashboardStep, TrainingArtifact
 
@@ -31,8 +33,49 @@ class Dashboard:
         self.font = pygame.font.SysFont(None, 24)
         self.small_font = pygame.font.SysFont(None, 18)
         self.title_font = pygame.font.SysFont(None, 32)
-        self.tower = Tower(screen_width=BOARD_WIDTH, screen_height=SCREEN_HEIGHT)
+        self.tower = Tower(
+            screen_width=BOARD_WIDTH,
+            screen_height=SCREEN_HEIGHT,
+            num_discs=int(artifact.data["config"]["num_discs"]),
+        )
         self.current_step = artifact.get_step(episode_index=-1, step_index=0)
+        self._animated_disc_id: int | None = None
+
+    @property
+    def animation_complete(self) -> bool:
+        return self._animated_disc_id is None or not self.tower.discs[self._animated_disc_id].is_moving
+
+    def start_step_animation(self, step: DashboardStep, duration_seconds: float) -> None:
+        """Place a step at its source state and prepare its moved disc to travel."""
+        self.current_step = step
+        self.tower.set_state(step.state)
+        target_x, target_y = self.tower.compute_disc_positions_from_state(step.next_state)[step.disc_id]
+        disc = self.tower.discs[step.disc_id]
+        disc.set_target(target_x, target_y)
+        disc.speed = self._animation_speed(disc, duration_seconds)
+        self._animated_disc_id = step.disc_id
+
+    def update_animation(self) -> None:
+        if not self.animation_complete:
+            self.tower.update()
+
+    def set_animation_duration(self, duration_seconds: float) -> None:
+        """Retiming an active move keeps the speed controls visually responsive."""
+        if not self.animation_complete:
+            disc = self.tower.discs[self._animated_disc_id]
+            disc.speed = self._animation_speed(disc, duration_seconds)
+
+    def _animation_speed(self, disc, duration_seconds: float) -> int:
+        """Choose a per-frame speed that completes the lift-slide-drop path on time."""
+        source_x, source_y = disc.rect.center
+        target_x, target_y = disc.target_x, disc.target_y
+        travel_distance = (
+            max(source_y - Y_COORD_LATERAL_MOVEMENT, 0)
+            + abs(target_x - source_x)
+            + max(target_y - Y_COORD_LATERAL_MOVEMENT, 0)
+        )
+        frames = max(1, round(duration_seconds * 60))
+        return max(1, math.ceil(travel_distance / frames))
 
     def render_step(
         self,
@@ -41,9 +84,12 @@ class Dashboard:
         timeline_progress: tuple[int, int] | None = None,
         playing: bool | None = None,
         speed: float | None = None,
+        animated: bool = False,
     ) -> None:
         self.current_step = step
-        self.tower.set_state(step.state)
+        if not animated:
+            self.tower.set_state(step.state)
+            self._animated_disc_id = None
         self.screen.fill(self.background_color)
         self._render_header(step, timeline_progress=timeline_progress, playing=playing, speed=speed)
         self._render_board_region(step)

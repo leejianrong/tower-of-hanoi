@@ -27,7 +27,7 @@ class TrainingReplayController:
         self.current_index = 0
         self.steps_per_second = steps_per_second
         self.playing = playing
-        self._accumulator_seconds = 0.0
+        self._animation_elapsed_seconds = 0.0
 
     @property
     def current_step(self) -> DashboardStep:
@@ -40,6 +40,15 @@ class TrainingReplayController:
     @property
     def at_end(self) -> bool:
         return self.current_index == len(self.timeline) - 1
+
+    @property
+    def step_duration_seconds(self) -> float:
+        return 1.0 / self.steps_per_second
+
+    @property
+    def animation_progress(self) -> float:
+        """Return the elapsed fraction of the current step's display time."""
+        return min(self._animation_elapsed_seconds / self.step_duration_seconds, 1.0)
 
     def toggle_playing(self) -> None:
         self.playing = not self.playing
@@ -55,11 +64,11 @@ class TrainingReplayController:
 
     def next_step(self) -> None:
         self.current_index = min(self.current_index + 1, len(self.timeline) - 1)
-        self._accumulator_seconds = 0.0
+        self._animation_elapsed_seconds = 0.0
 
     def previous_step(self) -> None:
         self.current_index = max(self.current_index - 1, 0)
-        self._accumulator_seconds = 0.0
+        self._animation_elapsed_seconds = 0.0
 
     def jump_episode(self, delta: int) -> None:
         current_episode = self.timeline[self.current_index].episode_index
@@ -74,13 +83,21 @@ class TrainingReplayController:
                 if self.timeline[idx].episode_index <= target_episode:
                     self.current_index = idx
             # The reverse scan leaves us at the first step of the target episode.
-        self._accumulator_seconds = 0.0
+        self._animation_elapsed_seconds = 0.0
 
-    def update(self, elapsed_seconds: float) -> None:
+    def update(self, elapsed_seconds: float, *, animation_complete: bool = True) -> None:
+        """Advance after the current step's display time and animation complete.
+
+        ``animation_complete`` lets the Pygame view keep the telemetry timeline
+        aligned with the moving disc.  The default retains a useful timer-only
+        controller for headless callers.
+        """
         if not self.playing or self.at_end:
             return
-        self._accumulator_seconds += elapsed_seconds
-        seconds_per_step = 1.0 / self.steps_per_second
-        while self._accumulator_seconds >= seconds_per_step and not self.at_end:
+        self._animation_elapsed_seconds += max(0.0, elapsed_seconds)
+        if (
+            self._animation_elapsed_seconds >= self.step_duration_seconds
+            and animation_complete
+        ):
             self.current_index += 1
-            self._accumulator_seconds -= seconds_per_step
+            self._animation_elapsed_seconds = 0.0
