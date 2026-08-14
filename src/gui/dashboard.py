@@ -45,6 +45,19 @@ class Dashboard:
     def animation_complete(self) -> bool:
         return self._animated_disc_id is None or not self.tower.discs[self._animated_disc_id].is_moving
 
+    @property
+    def animation_phase(self) -> str:
+        if self._animated_disc_id is None:
+            return "READY"
+        disc = self.tower.discs[self._animated_disc_id]
+        if not disc.is_moving:
+            return "SET"
+        if disc.rect.centerx == disc.source_x and disc.rect.centery > Y_COORD_LATERAL_MOVEMENT:
+            return "LIFT"
+        if disc.rect.centerx != disc.target_x:
+            return "CROSS"
+        return "SET"
+
     def start_step_animation(self, step: DashboardStep, duration_seconds: float) -> None:
         """Place a step at its source state and prepare its moved disc to travel."""
         self.current_step = step
@@ -93,6 +106,8 @@ class Dashboard:
         self.screen.fill(self.background_color)
         self._render_header(step, timeline_progress=timeline_progress, playing=playing, speed=speed)
         self._render_board_region(step)
+        if animated:
+            self._render_transition_rail(step)
         self._render_heatmap(step)
         self._render_epsilon_gauge(step)
         self._render_reward_badge(step)
@@ -119,7 +134,27 @@ class Dashboard:
             state = "PLAY" if playing else "PAUSE"
             speed_text = f"{speed:.1f} steps/s" if speed is not None else ""
             timeline = f"{state}  Timeline {current}/{total}  {speed_text}"
-            self.screen.blit(self.small_font.render(timeline, True, self.text_color), (48, 84))
+            self.screen.blit(self.small_font.render(timeline, True, self.text_color), (500, 84))
+
+    def _render_transition_rail(self, step: DashboardStep) -> None:
+        """Show the real lift-slide-drop phase of the active physical move."""
+        phases = ("LIFT", "CROSS", "SET")
+        phase_index = phases.index(self.animation_phase)
+        x, y, width, gap = 48, 592, 432, 8
+        segment_width = (width - gap * (len(phases) - 1)) // len(phases)
+        label = self.small_font.render(f"DISC {step.disc_id} MOVE", True, self.text_color)
+        self.screen.blit(label, (x, y - 22))
+        for index, phase in enumerate(phases):
+            segment_x = x + index * (segment_width + gap)
+            color = Color.LIGHT_GRAY.value
+            if index < phase_index:
+                color = Color.INCHWORM.value
+            elif index == phase_index:
+                color = Color.PASTEL_AMBER.value
+            pygame.draw.rect(self.screen, color, pygame.Rect(segment_x, y, segment_width, 8), border_radius=4)
+            text_color = self.text_color if index <= phase_index else Color.PASTEL_GRAY.value
+            label = self.small_font.render(phase, True, text_color)
+            self.screen.blit(label, label.get_rect(center=(segment_x + segment_width // 2, y + 24)))
 
     def _render_board_region(self, step: DashboardStep) -> None:
         self.tower.render(self.screen)

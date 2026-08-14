@@ -91,6 +91,15 @@ def test_dashboard_animates_only_the_telemetry_move(tmp_path):
     assert dashboard.tower.discs[1].rect.center == (90, 495)
     assert not dashboard.tower.discs[1].is_moving
     assert not dashboard.animation_complete
+    assert dashboard.animation_phase == "LIFT"
+
+    while dashboard.tower.discs[0].rect.centery > 100:
+        dashboard.update_animation()
+    assert dashboard.animation_phase == "CROSS"
+
+    while dashboard.tower.discs[0].rect.centerx != 450:
+        dashboard.update_animation()
+    assert dashboard.animation_phase == "SET"
 
     for _ in range(math.ceil(1 * 60) + 3):
         dashboard.update_animation()
