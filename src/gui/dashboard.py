@@ -183,6 +183,16 @@ class Dashboard:
         )
         label = self.title_font.render("Q-table heatmap", True, self.text_color)
         self.screen.blit(label, (PANEL_X, PANEL_Y - 50))
+        q_before = step.q_values_before[step.action]
+        q_after = step.q_values_after[step.action]
+        q_delta = q_after - q_before
+        delta_color = Color.INCHWORM.value if q_delta >= 0 else pygame.Color("#d96c6c")
+        update_label = self.small_font.render(
+            f"Q(a) {q_before:.2f} → {q_after:.2f}  ({q_delta:+.2f})",
+            True,
+            delta_color,
+        )
+        self.screen.blit(update_label, (PANEL_X + 250, PANEL_Y - 40))
 
         q_table = step.q_table
         if not q_table:
