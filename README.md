@@ -11,8 +11,11 @@ flowchart LR
     C -->|make dashboard| D[browser dashboard]
 ```
 
-The dashboard is a work in progress: the layout and data are in place, disc animation is next
-(see [PLAN.md](PLAN.md)). A screenshot will go here once the layout has been checked in a browser.
+![The dashboard mid-run: a disc lifting off one rod, with the pie, charts and Q-table](docs/img/dashboard.png)
+
+The board animates (a disc lifts over its rod, travels across and lands on the other stack), and
+the charts and Q-table follow the clock. Fitting everything on one screen, bars and a scatter chart
+are next; see [PLAN.md](PLAN.md).
 
 ## Quick start
 
@@ -21,12 +24,15 @@ Needs Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 ```bash
 uv sync                # install
 make train             # about 30 s: trains, then writes records/replay.json
-make dashboard         # prints a local URL; open it in a browser
+make dashboard         # prints a local URL; open it in a browser (plays about 11 minutes at 1x)
 ```
 
 Seed 7 reaches its first optimal 31-move solution at episode 655.
 
 ## Usage
+
+Controls: space plays or pauses, the arrow keys step (with shift, jump an episode), the speed buttons
+run 1x to 64x, and the slider scrubs. `?t=120&paused=1` on the URL opens at 120 seconds, paused.
 
 Replay the run you just trained, or point the dashboard at another replay file:
 

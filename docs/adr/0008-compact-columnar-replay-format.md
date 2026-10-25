@@ -20,8 +20,9 @@ run), schema `replay_schema_version: 1`:
 - `config`: discs, step limit, learning parameters, seed.
 - `episodes`: parallel arrays `start` (one extra entry, the total step count), `epsilon`
   (at the start of the episode), `reward`, `solved`, `optimal`.
-- `steps`: parallel arrays `state`, `action`, `explore`, `reward`, `next_state`, `q_after`
-  (the updated Q of that state and action), `draw` (the exploration random draw).
+- `steps`: parallel arrays `state`, `action`, `disc` (the disc moved), `explore`, `reward`,
+  `next_state`, `q_after` (the updated Q of that state and action), `draw` (the random draw).
+- `config.action_map` lists the rod pair for each action, so the browser never hard-codes it.
 
 A state id is the rod of each disc in base 3: disc `d` on rod `r` adds `r * 3**d`, so the start
 state is 0 and a 5-disc game has 243 states. Within a rod the bigger disc is below, so the id fixes

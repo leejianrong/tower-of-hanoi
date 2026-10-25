@@ -412,6 +412,7 @@ dependencies = [
     { name = "gymnasium" },
     { name = "indah" },
     { name = "numpy" },
+    { name = "starlette" },
 ]
 
 [package.dev-dependencies]
@@ -425,6 +426,7 @@ requires-dist = [
     { name = "gymnasium", specifier = ">=1.2.3" },
     { name = "indah", specifier = ">=0.9.0" },
     { name = "numpy", specifier = ">=2.4.0" },
+    { name = "starlette", specifier = ">=1.10.0" },
 ]
 
 [package.metadata.requires-dev]

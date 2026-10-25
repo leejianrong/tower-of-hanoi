@@ -1,6 +1,6 @@
 # Plan: browser dashboard for the Q-learning replay
 
-Status: slices 1 and 2 done, slice 3 next. Supersedes the Pygame plan in `docs/archive/`.
+Status: slices 1 to 3 done, slice 4 next. Supersedes the Pygame plan in `docs/archive/`.
 
 ## Goal
 
@@ -49,9 +49,9 @@ flowchart LR
 | # | Slice | Status |
 |---|-------|--------|
 | 1 | Data layer: state ids, compact replay, Q-table rebuild, pacing schedule; Pygame removed | Done |
-| 2 | Dashboard on today's indah with a server clock: layout, charts, heatmap, board and pie modules (no motion) | Done, layout unverified in a browser |
-| 3 | Client clock and board animation: disc lifts above the rod, travels over, descends onto the stack (no arrow); scrubbing | Next |
-| 4 | Indah features below, each as an indah ADR and card | |
+| 2 | Dashboard on today's indah with a server clock: layout, charts, heatmap, board and pie modules (no motion) | Done |
+| 3 | Browser clock, board animation (lift, travel over, descend; no arrow), transport and scrubbing, pacing caps | Done |
+| 4 | Indah features below, each as an indah ADR and card | Next |
 | 5 | Deterministic clock, `?record` mode, frame capture and ffmpeg export | |
 | 6 | Sound cues synced to the clock (ADR-0005), auto-pacing polish | |
 
@@ -70,9 +70,23 @@ Found while building slice 2; slice 4 upstreams the generic ones.
 | G7 Large data | Props go through patches | Fetch a static dataset once (typed arrays) |
 | G8 Sound cues | `Audio` plays a file | Cues fired from clock events |
 
+Seen in the screenshots of slice 3: a chart in `points` mode still draws its line, so the reward and
+steps charts read as spikes (wants a scatter kind, G2); the heatmap paints unvisited zeros and
+negatives with opposite ends of one colour scale and cannot tell an illegal move from a very
+negative Q (G3); and the page is taller than one screen (G1).
+
+## Pacing
+
+`Pacing` in `src/replay/schedule.py` sets the length of the video. The first run took 19 minutes at
+1x because 172 solved episodes played at 0.06 s a step. Now a solved episode is capped at 2 s, one
+that beats the best so far is slowed (0.15 s a step, up to 8 s), a failed one flashes by in 0.3 s:
+the 655-episode run plays in about 10.8 minutes. Tune it by editing the defaults; the controls scale
+it from 1x to 64x.
+
 ## Risks
 
-- Layout is only checked through the app serving and tests, not in a browser: look at it before
-  slice 3 builds on it.
-- The Q update appears when a step is 75% done (`UPDATE_PHASE`); that choice is ours, change it freely.
-- Headless Chromium for export may be heavy under WSL; fall back to a Windows screen recorder.
+- The charts and the Q-table follow the browser clock through the server, so they trail the board by
+  up to one tick (200 ms, 50 ms at 16x and above). Moving them client-side needs G2, G3 and G7.
+- The Q update appears when the disc has landed (90% of the step, `UPDATE_PHASE`); change it freely.
+- Headless Chromium works under WSL (screenshots in this repo's history were taken with it) but is
+  heavy; export in slice 5 may still fall back to a Windows screen recorder.

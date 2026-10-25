@@ -1,89 +1,58 @@
-"""The replay dashboard as an indah app (ADR-0006).
+"""The replay dashboard as an indah app (ADR-0006, ADR-0007).
 
-Slice 2 of PLAN.md: the whole layout built from indah's existing components plus two small
-browser modules, driven by a server-side clock that ticks at 10 Hz. A frame is still a pure
-function of the clock (``Player.frame``), which is what lets the clock move into the browser
-later without touching any of this. The gaps this version shows are listed in PLAN.md.
+Slice 3 of PLAN.md. The clock lives in the browser: the ``hanoi-stage`` module downloads the
+replay once, animates the board and the pie at the display's frame rate, and reports the playhead
+to Python a few times a second (the ``tick`` event). Python follows: each tick moves the ``Player``
+to that time and the charts, the Q-table and the progress readouts update from it.
 """
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import indah
 
+from src.dashboard.bundle import build_bundle, routes
 from src.dashboard.player import Player
 from src.dashboard.theme import THEME
 from src.replay.compact import ReplayData
 from src.replay.schedule import Pacing, Schedule, build_schedule
 
 STATIC = Path(__file__).parent / "static"
-TICK_S = 0.1
-SPEEDS = (("1", "1x"), ("4", "4x"), ("16", "16x"), ("64", "64x"))
 
-# Chart strokes must work on both schemes until Chart can read theme tokens (PLAN.md, gap G8).
+# Chart strokes must work on both schemes until Chart can read theme tokens (PLAN.md, gap G5).
 ORANGE, TEAL, BLUE = "#f08a00", "#1fa99c", "#4d8fe0"
 
 
 def register_components() -> None:
-    indah.register_component("hanoi-board", module=STATIC / "hanoi-board.js", fallback="caption")
-    indah.register_component("explore-pie", module=STATIC / "explore-pie.js", fallback="caption")
+    indah.register_component(
+        "hanoi-stage", module=STATIC / "hanoi-stage.js", events=["tick"], fallback="caption"
+    )
 
 
 def build_session_factory(
     replay: ReplayData, schedule: Schedule
 ) -> Callable[[indah.Context], indah.Session]:
-    num_discs = replay.num_discs
-
     def factory(ctx: indah.Context) -> indah.Session:
         player = Player(replay, schedule)
         frame = indah.Signal(player.frame())
         episode = indah.Signal(frame.value.episode)
         step = indah.Signal(frame.value.step)
         applied = indah.Signal(frame.value.applied)
-        playing = indah.Signal(True)
-        speed = indah.Signal("1")
 
-        def refresh() -> None:
+        def on_tick(detail: Any) -> None:
+            """The browser's clock, in seconds. Ignore anything that is not a number."""
+            t = detail.get("t") if isinstance(detail, dict) else None
+            if isinstance(t, bool) or not isinstance(t, (int, float)):
+                return
+            player.seek(float(t))
             current = player.frame()
             frame.set(current)
             episode.set(current.episode)
             step.set(current.step)
             applied.set(current.applied)
 
-        def tick() -> None:
-            player.playing = playing.value
-            player.speed = float(speed.value)
-            player.advance(TICK_S)
-            refresh()
-
-        def toggle() -> None:
-            playing.set(not playing.value)
-
-        def restart() -> None:
-            player.seek(0)
-            refresh()
-
-        ctx.every(TICK_S, tick)
-
-        board = indah.custom(
-            "hanoi-board",
-            caption="Board",
-            discs=num_discs,
-            rods=indah.computed(lambda: [list(r) for r in frame.value.rods]),
-            move=indah.computed(
-                lambda: {
-                    "disc": frame.value.disc,
-                    "source": frame.value.source,
-                    "target": frame.value.target,
-                }
-            ),
-        )
-        pie = indah.custom(
-            "explore-pie",
-            caption="Explore or exploit",
-            epsilon=indah.computed(lambda: frame.value.epsilon),
-            explore=indah.computed(lambda: frame.value.explore),
-        )
+        stage = indah.custom("hanoi-stage", caption="Board and playback", on_tick=on_tick)
 
         header = indah.Row(
             align="center",
@@ -94,19 +63,12 @@ def build_session_factory(
                     lambda: f"Episode {frame.value.episode_number} / {frame.value.episode_count}",
                     variant="mono",
                 ),
-                indah.Progress(
-                    lambda: frame.value.episode_number / frame.value.episode_count,
-                ),
+                indah.Progress(lambda: frame.value.episode_number / frame.value.episode_count),
                 indah.Text(
                     lambda: f"Step {frame.value.step_in_episode} / {frame.value.max_steps}",
                     variant="mono",
                 ),
                 indah.Progress(lambda: frame.value.step_in_episode / frame.value.max_steps),
-                indah.Button(lambda: "Pause" if playing.value else "Play", on_click=toggle),
-                indah.Button("Restart", on_click=restart, variant="ghost"),
-                indah.Segmented(
-                    speed, options=[{"value": v, "label": label} for v, label in SPEEDS]
-                ),
             ],
         )
 
@@ -149,17 +111,13 @@ def build_session_factory(
                 ),
                 chart(
                     "Reward this episode",
-                    indah.computed(
-                        lambda: player.return_in_episode(episode.value, step.value)
-                    ),
+                    indah.computed(lambda: player.return_in_episode(episode.value, step.value)),
                     x_label="step",
                     series=[{"label": "return", "stroke": TEAL}],
                 ),
                 chart(
                     "Q-value change per step",
-                    indah.computed(
-                        lambda: player.q_change_in_episode(episode.value, step.value)
-                    ),
+                    indah.computed(lambda: player.q_change_in_episode(episode.value, step.value)),
                     x_label="step",
                     series=[{"label": "|change|", "stroke": ORANGE}],
                     points=True,
@@ -182,13 +140,7 @@ def build_session_factory(
             ]
         )
 
-        top = indah.Row(
-            align="start",
-            children=[
-                indah.Column(children=[indah.Card(children=[board]), indah.Card(children=[pie])]),
-                charts,
-            ],
-        )
+        top = indah.Row(align="start", children=[indah.Card(children=[stage]), charts])
         return indah.Session(indah.Column(children=[header, top, heatmap]))
 
     return factory
@@ -197,7 +149,7 @@ def build_session_factory(
 def create_app(replay: ReplayData, pacing: Pacing | None = None):
     register_components()
     schedule = build_schedule(replay, pacing)
-    return indah.create_app(
+    app = indah.create_app(
         session_factory=build_session_factory(replay, schedule),
         theme=THEME,
         title="Hanoi RL",
@@ -205,3 +157,5 @@ def create_app(replay: ReplayData, pacing: Pacing | None = None):
         density="compact",
         proxy_flush=False,  # no window-buffering proxy on localhost; skips ~8 KB padding per frame
     )
+    app.router.routes[0:0] = routes(build_bundle(replay, schedule))
+    return app

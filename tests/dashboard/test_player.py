@@ -51,15 +51,10 @@ def test_episode_return_accumulates_within_an_episode_only(player, replay):
     assert player.frame().episode_return == replay.step_reward[second]
 
 
-def test_advance_respects_speed_and_pause_and_clamps_at_the_end(player):
-    player.speed = 4.0
-    player.advance(0.5)
-    assert player.t == pytest.approx(2.0)
-    player.playing = False
-    player.advance(10)
-    assert player.t == pytest.approx(2.0)
-    player.playing = True
-    player.advance(1e9)
+def test_seek_clamps_to_the_run(player):
+    player.seek(-5)
+    assert player.t == 0.0
+    player.seek(1e9)
     assert player.t == player.schedule.total_s
     assert player.frame().done
 
