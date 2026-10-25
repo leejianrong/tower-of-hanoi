@@ -1,6 +1,6 @@
 # ADR-0003: Build a single Pygame dashboard
 
-- Status: Accepted
+- Status: Superseded by ADR-0006
 - Date: 2026-08-09
 - Deciders: Jian, Codex
 

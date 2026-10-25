@@ -1,84 +1,63 @@
-# Tower of Hanoi (RL + Visualization)
+# Tower of Hanoi, learning to solve itself
 
-A small Tower of Hanoi project with three pieces:
-- A terminal game loop to play manually.
-- A Gymnasium-compatible environment + Q-learning agent.
-- A Pygame replay visualizer for recorded games.
+Train a Q-learning agent on 5-disc Tower of Hanoi, then replay every episode in the browser: the
+board, the explore-or-exploit decision, the whole Q-table and the learning curves on one screen,
+paced to be watched and recorded.
 
-## Requirements
-- Python 3.11+
-- Dependencies: `gymnasium`, `numpy`, `pygame`
-
-## Setup
-
-If you use `uv`:
-
-```bash
-uv sync
+```mermaid
+flowchart LR
+    A[make train] -->|every step, 70 MB| B[telemetry]
+    B -->|make replay-data| C[replay.json, 2.7 MB]
+    C -->|make dashboard| D[browser dashboard]
 ```
 
-If you use `pip`:
+The dashboard is a work in progress: the layout and data are in place, disc animation is next
+(see [PLAN.md](PLAN.md)). A screenshot will go here once the layout has been checked in a browser.
+
+## Quick start
+
+Needs Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
+uv sync                # install
+make train             # about 30 s: trains, then writes records/replay.json
+make dashboard         # prints a local URL; open it in a browser
 ```
 
-## Run The Game (CLI)
+Seed 7 reaches its first optimal 31-move solution at episode 655.
 
-Runs a simple terminal-based game loop and records your moves into `records/`.
+## Usage
+
+Replay the run you just trained, or point the dashboard at another replay file:
 
 ```bash
-python -m src.core.game
+uv run python -m src.dashboard records/replay.json
 ```
 
-Notes:
-- You will be prompted for `start` and `target` rod indices (0, 1, 2).
-- The recording is saved as `records/record_YYYY_MM_DD_HH_MM_SS.json`.
+Train with other settings from Python:
 
-## Run The Visualization (Pygame Replay)
+```python
+from train import train
 
-Runs the telemetry dashboard for `records/qlearningagent_training.json`.
-
-```bash
-python -m src.gui.dashboard_app
+train("records/small.json", num_discs=4, max_steps=100, max_episodes=500, seed=1)
 ```
 
-Notes:
-- Run `python train.py` first if `records/qlearningagent_training.json` does not exist.
-- The legacy move-history renderer still exists in `src/gui/renderer.py`.
-- To render one dashboard frame headlessly, run `make dashboard-frame`.
-- To render a deterministic in-motion replay frame headlessly, run
-  `make dashboard-animation-frame`.
-- To start the interactive replay, run `make replay`; close it with
-  `make replay-stop`, and inspect startup errors with `make replay-log`.
+Then convert it with `uv run python -m src.replay records/small.json records/replay.json`.
 
-## Training (Q-learning)
+Play the game yourself in the terminal with `uv run python -m src.core.game`; moves are saved to
+`records/`.
 
-Runs a Q-learning loop and writes a complete training telemetry file to `records/`.
-The trainer records every episode and every explore/exploit decision with rewards,
-then stops early when the agent first solves the 5-disc puzzle in the optimal 31 moves.
+## Project layout
 
-```bash
-python train.py
-```
+- `src/core`, `src/envs`, `src/agents`: the game, a Gymnasium environment and the Q-learning agent.
+- `src/replay`: converts training telemetry into a compact replay and a watchable timeline.
+- `src/dashboard`: the [indah](https://github.com/leejianrong/indah) app and its browser modules.
+- `docs/adr`: architecture decisions. `PLAN.md`: where the project is going.
 
-Notes:
-- Training uses `TowerEnv` from `src/envs/tower_env.py`.
-- Telemetry is written as `records/qlearningagent_training.json`.
-- The existing Pygame renderer still replays legacy move-history JSON files.
+## Contributing
 
-## Project Layout
+See [CONTRIBUTING.md](CONTRIBUTING.md). Run `make check` before pushing.
 
-- `src/core/` core Tower of Hanoi logic and CLI game loop
-- `src/envs/` Gymnasium environment
-- `src/agents/` Q-learning agent
-- `src/gui/` Pygame visualization + replay
-- `records/` saved game histories for replay
-- `train.py` training entrypoint
+## License
 
-## Tips
-
-- If Pygame fails to open a window (e.g., on a headless machine), run locally with a display server or use a remote desktop.
-- If you change the number of discs in training, update the GUI settings to match before replaying (see `src/gui/tower.py` and `src/gui/renderer.py`).
+No licence file yet, so all rights are reserved until one is added.

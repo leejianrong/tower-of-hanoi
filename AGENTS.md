@@ -1,34 +1,29 @@
-# Agent Brief
+# Agent brief
 
-Trust the code and tests over this document if they disagree.
+Trust the code and tests over any document, and fix the document. Plan: `PLAN.md`. Decisions:
+`docs/adr/` (0001 to 0002 and 0005 to 0008 are current; 0003 and 0004 are superseded).
 
-## Project
+## What
 
-Tower of Hanoi game logic, a Gymnasium environment, a Q-learning agent, and a Pygame replay visualizer.
+Tower of Hanoi game logic, a Gymnasium env, a tabular Q-learning agent, and a browser dashboard
+that replays a training run, built on the `indah` Python UI framework (no Node, no Pygame).
 
-## Commands
+- `src/core`, `src/envs`, `src/agents`: game, env, agent, training telemetry.
+- `src/replay`: telemetry to compact replay, Q-table rebuild, pacing schedule. No UI imports.
+- `src/dashboard`: `Player` (frame = pure function of a clock), the indah app, two browser modules
+  in `static/`.
 
-- Install dependencies: `make sync`
-- Run all cheap checks: `make check`
-- Lint: `make lint`
-- Test: `make test`
-- Compile check: `make compile`
-- Train Q-learning agent: `make train`
-- Run replay visualizer: `make replay`
-- Install local pre-push hook: `make install-hooks`
+## How
 
-Use `uv run python -m pytest`, not the direct `.venv/bin/pytest` script, because virtualenv script shebangs can go stale when this repo moves.
-
-## Workflow
-
-- Work branch-per-slice once the GitHub repo is initialized.
-- Keep `main` protected and PR-only after the bootstrap commit is pushed.
-- Generated training records are local artifacts. Do not commit new `records/qlearningagent_*.json` or timestamped `records/record_*.json` files unless explicitly requested as fixtures.
-- Core tests should stay no-infra and deterministic.
-
-## Test Focus
-
-- `src/core/`: Tower, Rod, and Disc behavior.
-- `src/envs/`: Gymnasium reset/step semantics, rewards, action masks, truncation.
-- `src/agents/`: Q-table initialization, masked action selection, learning update.
-- `src/gui/`: keep importable and compile-clean; visual behavior needs manual verification unless a headless GUI test is added.
+- `make sync`, `make check` (lint, test, compile), `make train` (also writes `records/replay.json`),
+  `make dashboard`.
+- Run tests with `uv run python -m pytest`, never `.venv/bin/pytest`.
+- `src/replay` and `Player` must not import indah or a browser API: that is what keeps them testable.
+- All pacing and timing decisions live in Python (`src/replay/schedule.py`); the browser only
+  follows the schedule (ADR-0007).
+- The state-id encoding in `src/replay/encoding.py` is a contract with the browser (ADR-0008). Change
+  it only with the ADR and the JavaScript together.
+- Do not install packages outside `pyproject.toml` (the dev group has what tests need); the tests
+  call the ASGI app directly instead of using starlette's test client for that reason.
+- Do not commit `records/*.json`, except the one fixture already tracked.
+- Branch per slice, PR into `main`; `scripts/hooks/pre-push` runs `make check`.
