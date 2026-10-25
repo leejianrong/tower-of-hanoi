@@ -174,3 +174,32 @@ def test_q_deltas_sum_to_the_final_table(replay):
     total = sum(deltas)
     final = QReplayer(replay).seek(replay.step_count)
     assert total == pytest.approx(float(final.sum()), abs=1e-3)
+
+
+def test_replay_from_an_older_version_says_how_to_rebuild_it(replay):
+    document = replay.to_json()
+    del document["steps"]["disc"]
+    with pytest.raises(ValueError, match="make replay-data"):
+        ReplayData.from_json(document)
+
+
+def test_schedule_caps_solved_episodes_and_slows_new_records(replay):
+    pacing = Pacing(intro_episodes=0, solved_cap_s=0.5, record_cap_s=3.0, record_step_s=0.2)
+    schedule = build_schedule(replay, pacing)
+    best = None
+    seen_record = False
+    for episode in range(replay.episode_count - 1):
+        steps = replay.episode_range(episode)
+        total = sum(schedule.step_dur[i] for i in steps)
+        solved = bool(replay.episode_solved[episode])
+        if solved and (best is None or len(steps) < best):
+            seen_record = True
+            assert total <= pacing.record_cap_s + len(steps) * 1e-4
+            assert schedule.step_dur[steps[0]] == pytest.approx(
+                min(pacing.record_step_s, pacing.record_cap_s / len(steps)), abs=1e-4
+            )
+        elif solved:
+            assert total <= pacing.solved_cap_s + len(steps) * 1e-4
+        if solved:
+            best = len(steps) if best is None else min(best, len(steps))
+    assert seen_record

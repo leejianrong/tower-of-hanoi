@@ -7,7 +7,7 @@ help:
 		'Available targets:' \
 		'  make sync          Install dependencies with uv' \
 		'  make lint          Run ruff' \
-		'  make test          Run pytest' \
+		'  make test          Run pytest and the Node tests for the browser core' \
 		'  make compile       Compile Python files' \
 		'  make check         Run lint, test, and compile' \
 		'  make train         Train the Q-learning agent and write telemetry' \
@@ -23,6 +23,7 @@ lint:
 
 test:
 	uv run python -m pytest
+	node --test "tests/js/*.test.mjs"
 
 compile:
 	uv run python -m compileall src train.py

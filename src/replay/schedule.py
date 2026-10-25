@@ -14,15 +14,23 @@ from typing import Any
 from src.replay.compact import ReplayData
 
 
+# Times are kept to this many decimals everywhere, so the schedule Python uses and the JSON the
+# browser reads hold identical numbers and both resolve a step boundary the same way.
+PRECISION = 4
+
+
 @dataclass(frozen=True)
 class Pacing:
     intro_episodes: int = 3  # the first episodes play slowly so the rules are visible
     intro_step_s: float = 0.7
     intro_slow_steps: int = 24  # after this many steps an intro episode speeds up
-    fast_episode_s: float = 0.45  # a failed episode flashes by in this long, however long it was
-    solved_step_s: float = 0.06  # a solved episode plays at a readable pace
+    fast_episode_s: float = 0.3  # a failed episode flashes by in this long, however long it was
+    solved_step_s: float = 0.06  # a solved episode plays at a readable pace...
+    solved_cap_s: float = 2.0  # ...but never longer than this
+    record_step_s: float = 0.15  # an episode that beats the best solve so far is slowed down
+    record_cap_s: float = 8.0
     final_step_s: float = 0.6  # the first optimal solve is slow
-    episode_gap_s: float = 0.12  # a short beat between episodes
+    episode_gap_s: float = 0.06  # a short beat between episodes
 
 
 @dataclass(frozen=True)
@@ -55,14 +63,16 @@ class Schedule:
 
     def to_json(self) -> dict[str, Any]:
         return {
-            "step_t0": [round(v, 4) for v in self.step_t0],
-            "step_dur": [round(v, 4) for v in self.step_dur],
-            "episode_t0": [round(v, 4) for v in self.episode_t0],
-            "total_s": round(self.total_s, 4),
+            "step_t0": self.step_t0,
+            "step_dur": self.step_dur,
+            "episode_t0": self.episode_t0,
+            "total_s": self.total_s,
         }
 
 
-def _episode_durations(replay: ReplayData, episode: int, pacing: Pacing) -> list[float]:
+def _episode_durations(
+    replay: ReplayData, episode: int, pacing: Pacing, is_record: bool
+) -> list[float]:
     count = len(replay.episode_range(episode))
     if count == 0:
         return []
@@ -73,8 +83,10 @@ def _episode_durations(replay: ReplayData, episode: int, pacing: Pacing) -> list
         slow = min(count, pacing.intro_slow_steps)
         fast = (pacing.fast_episode_s / count) if count > slow else 0.0
         return [pacing.intro_step_s] * slow + [fast] * (count - slow)
+    if is_record:
+        return [min(pacing.record_step_s, pacing.record_cap_s / count)] * count
     if replay.episode_solved[episode]:
-        return [pacing.solved_step_s] * count
+        return [min(pacing.solved_step_s, pacing.solved_cap_s / count)] * count
     return [pacing.fast_episode_s / count] * count
 
 
@@ -84,15 +96,22 @@ def build_schedule(replay: ReplayData, pacing: Pacing | None = None) -> Schedule
     step_dur: list[float] = []
     episode_t0: list[float] = []
     clock = 0.0
+    best = None  # fewest steps of any solved episode so far
     for episode in range(replay.episode_count):
-        durations = _episode_durations(replay, episode, pacing)
+        count = len(replay.episode_range(episode))
+        solved = bool(replay.episode_solved[episode])
+        is_record = solved and (best is None or count < best)
+        if solved:
+            best = count if best is None else min(best, count)
+        durations = _episode_durations(replay, episode, pacing, is_record)
         episode_t0.append(clock)
         for duration in durations:
+            duration = max(round(duration, PRECISION), 10**-PRECISION)
             step_t0.append(clock)
             step_dur.append(duration)
-            clock += duration
+            clock = round(clock + duration, PRECISION)
         if durations:
-            clock += pacing.episode_gap_s
+            clock = round(clock + pacing.episode_gap_s, PRECISION)
     if not step_t0:
         raise ValueError("Cannot schedule a replay with no steps.")
     return Schedule(step_t0, step_dur, episode_t0, clock, replay)

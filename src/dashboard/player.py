@@ -1,9 +1,9 @@
-"""The playback state of the dashboard, with no UI in it (ADR-0007).
+"""What the Python side of the dashboard shows at a given moment, with no UI in it (ADR-0007).
 
-A ``Player`` owns one number, the clock ``t`` in seconds. Everything on screen is a function of
-``t``: ``frame()`` asks the schedule where the playhead is and looks the rest up in the replay.
-Nothing here imports indah or a browser API, so the same rules can be tested in plain Python and
-later ported to a client-side clock without changing what a frame means.
+A ``Player`` holds one number, ``t`` in seconds. The browser owns the clock and reports it with
+``seek``; everything Python draws (the charts, the Q-table, the progress readouts) is a function
+of ``t``: ``frame()`` asks the schedule where the playhead is and looks the rest up in the
+replay. Nothing here imports indah or a browser API, so the rules are tested in plain Python.
 """
 
 from dataclasses import dataclass
@@ -15,8 +15,9 @@ from src.replay.encoding import decode_state
 from src.replay.qtable import QReplayer, q_deltas
 from src.replay.schedule import Schedule
 
-# The step's Q update lands this far through its animation (the disc has settled).
-UPDATE_PHASE = 0.75
+# The step's Q update lands this far through its animation: the disc has all but settled
+# (replay-core.js PHASE: lift, travel, then the descent that ends the step).
+UPDATE_PHASE = 0.9
 
 
 @dataclass(frozen=True)
@@ -46,8 +47,6 @@ class Player:
         self.replay = replay
         self.schedule = schedule
         self.t = 0.0
-        self.playing = True
-        self.speed = 1.0
         self._q = QReplayer(replay)
         self._dq = q_deltas(replay)
         self._cumulative = self._episode_cumulative()
@@ -61,11 +60,7 @@ class Player:
                 out.append(total)
         return out
 
-    # -- clock ---------------------------------------------------------------------------
-
-    def advance(self, dt: float) -> None:
-        if self.playing and self.t < self.schedule.total_s:
-            self.t = min(self.t + dt * self.speed, self.schedule.total_s)
+    # -- position (the clock itself runs in the browser) -------------------------------------
 
     def seek(self, t: float) -> None:
         self.t = min(max(t, 0.0), self.schedule.total_s)

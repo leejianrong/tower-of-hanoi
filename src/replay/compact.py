@@ -16,7 +16,7 @@ from src.replay.encoding import ACTION_MAP, apply_action, encode_state, legal_ma
 
 REPLAY_SCHEMA_VERSION = 1
 
-_STEP_COLUMNS = ("state", "action", "explore", "reward", "next_state", "q_after", "draw")
+_STEP_COLUMNS = ("state", "action", "disc", "explore", "reward", "next_state", "q_after", "draw")
 _EPISODE_COLUMNS = ("epsilon", "reward", "solved", "optimal")
 
 
@@ -39,6 +39,7 @@ class ReplayData:
     episode_optimal: list[int]
     step_state: list[int]
     step_action: list[int]
+    step_disc: list[int]
     step_explore: list[int]
     step_reward: list[float]
     step_next_state: list[int]
@@ -81,8 +82,7 @@ class ReplayData:
 
     def move(self, step: int) -> Move:
         source, target = ACTION_MAP[self.step_action[step]]
-        _, disc = apply_action(self.step_state[step], self.step_action[step], self.num_discs)
-        return Move(disc=disc, source=source, target=target)
+        return Move(disc=self.step_disc[step], source=source, target=target)
 
     def legal_table(self) -> list[int]:
         """Legal-action bitmask for every state id (the heatmap's masked cells)."""
@@ -106,6 +106,7 @@ class ReplayData:
             "steps": {
                 "state": self.step_state,
                 "action": self.step_action,
+                "disc": self.step_disc,
                 "explore": self.step_explore,
                 "reward": self.step_reward,
                 "next_state": self.step_next_state,
@@ -119,6 +120,13 @@ class ReplayData:
         if data.get("replay_schema_version") != REPLAY_SCHEMA_VERSION:
             raise ValueError(f"Expected replay_schema_version={REPLAY_SCHEMA_VERSION}.")
         episodes, steps = data["episodes"], data["steps"]
+        missing = [c for c in _STEP_COLUMNS if c not in steps]
+        missing += [c for c in ("start", *_EPISODE_COLUMNS) if c not in episodes]
+        if missing:
+            raise ValueError(
+                f"Replay is missing columns {missing}; it was made by an older version. "
+                "Run `make replay-data` to rebuild it."
+            )
         return cls(
             config=data["config"],
             episode_start=list(episodes["start"]),
@@ -128,6 +136,7 @@ class ReplayData:
             episode_optimal=list(episodes["optimal"]),
             step_state=list(steps["state"]),
             step_action=list(steps["action"]),
+            step_disc=list(steps["disc"]),
             step_explore=list(steps["explore"]),
             step_reward=list(steps["reward"]),
             step_next_state=list(steps["next_state"]),
@@ -165,6 +174,7 @@ def build_replay(telemetry: dict[str, Any]) -> ReplayData:
         "min_epsilon": source_config["min_epsilon"],
         "seed": source_config.get("seed"),
         "num_actions": len(ACTION_MAP),
+        "action_map": [list(pair) for pair in ACTION_MAP],
     }
     columns: dict[str, list] = {name: [] for name in _STEP_COLUMNS}
     episode_start = [0]
@@ -173,8 +183,10 @@ def build_replay(telemetry: dict[str, Any]) -> ReplayData:
     for episode in telemetry["episodes"]:
         for step in episode["steps"]:
             action = int(step["action"])
-            columns["state"].append(encode_state(step["state"], num_discs))
+            state_id = encode_state(step["state"], num_discs)
+            columns["state"].append(state_id)
             columns["action"].append(action)
+            columns["disc"].append(apply_action(state_id, action, num_discs)[1])
             columns["explore"].append(1 if step["decision_mode"] == "explore" else 0)
             columns["reward"].append(float(step["reward"]))
             columns["next_state"].append(encode_state(step["next_state"], num_discs))
@@ -195,6 +207,7 @@ def build_replay(telemetry: dict[str, Any]) -> ReplayData:
         episode_optimal=episodes["optimal"],
         step_state=columns["state"],
         step_action=columns["action"],
+        step_disc=columns["disc"],
         step_explore=columns["explore"],
         step_reward=columns["reward"],
         step_next_state=columns["next_state"],

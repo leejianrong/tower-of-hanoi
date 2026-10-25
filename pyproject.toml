@@ -8,6 +8,7 @@ dependencies = [
     "gymnasium>=1.2.3",
     "indah>=0.9.0",
     "numpy>=2.4.0",
+    "starlette>=1.10.0",
 ]
 
 [dependency-groups]
