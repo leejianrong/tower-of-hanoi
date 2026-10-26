@@ -1,18 +1,18 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help sync lint test compile check train replay dashboard-frame install-hooks
+.PHONY: help sync lint test compile check train replay-data dashboard install-hooks
 
 help:
 	@printf '%s\n' \
 		'Available targets:' \
 		'  make sync          Install dependencies with uv' \
 		'  make lint          Run ruff' \
-		'  make test          Run pytest' \
+		'  make test          Run pytest and the Node tests for the browser core' \
 		'  make compile       Compile Python files' \
 		'  make check         Run lint, test, and compile' \
 		'  make train         Train the Q-learning agent and write telemetry' \
-		'  make replay        Run the Pygame telemetry dashboard' \
-		'  make dashboard-frame Render one dashboard frame to /tmp' \
+		'  make replay-data   Convert training telemetry to the compact replay' \
+		'  make dashboard     Serve the browser dashboard (needs records/replay.json)' \
 		'  make install-hooks Install the local pre-push hook'
 
 sync:
@@ -23,6 +23,7 @@ lint:
 
 test:
 	uv run python -m pytest
+	node --test "tests/js/*.test.mjs"
 
 compile:
 	uv run python -m compileall src train.py
@@ -31,12 +32,13 @@ check: lint test compile
 
 train:
 	uv run python train.py
+	uv run python -m src.replay
 
-replay:
-	uv run python -m src.gui.dashboard_app
+replay-data:
+	uv run python -m src.replay
 
-dashboard-frame:
-	SDL_VIDEODRIVER=dummy uv run python -c 'from src.gui.dashboard import render_dashboard_frame; render_dashboard_frame("records/qlearningagent_training.json", "/tmp/tower_dashboard_frame.png"); print("/tmp/tower_dashboard_frame.png")'
+dashboard:
+	uv run python -m src.dashboard
 
 install-hooks:
 	cp scripts/hooks/pre-push .git/hooks/pre-push

@@ -6,8 +6,9 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "gymnasium>=1.2.3",
+    "indah>=0.9.0",
     "numpy>=2.4.0",
-    "pygame>=2.6.1",
+    "starlette>=1.10.0",
 ]
 
 [dependency-groups]
@@ -21,3 +22,8 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
+
+# The dashboard uses indah features (Frame, chart kinds, heatmap marks) that are not in a release
+# yet. Pinned to the branch until indah ships them; the lockfile holds the exact commit.
+[tool.uv.sources]
+indah = { git = "https://github.com/leejianrong/indah", branch = "agent/dashboard-pie" }

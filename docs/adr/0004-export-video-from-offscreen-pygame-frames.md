@@ -1,6 +1,6 @@
 # ADR-0004: Export video from offscreen Pygame frames
 
-- Status: Accepted
+- Status: Superseded by ADR-0006 and ADR-0007 (frames now come from a browser)
 - Date: 2026-08-09
 - Deciders: Jian, Codex
 

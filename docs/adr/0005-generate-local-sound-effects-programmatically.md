@@ -10,7 +10,7 @@ The video should include fun sounds: beeps, boops, coin clinks, short arpeggios,
 
 ## Decision
 
-The project will include a small Python sound generator that writes short WAV assets into `src/gui/assets/audio/`. It will use NumPy and stdlib WAV writing first, with `ffmpeg` only for optional conversion or final video muxing.
+The project will include a small Python sound generator that writes short WAV assets into `src/dashboard/static/audio/`. It will use NumPy and stdlib WAV writing first, with `ffmpeg` only for optional conversion or final video muxing.
 
 ## Alternatives Considered
 

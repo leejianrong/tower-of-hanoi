@@ -22,3 +22,6 @@ records/qlearningagent_*.json
 records/*training*.json
 records/record_*.json
 !records/record_2025_12_28_16_10_58.json
+
+# Dashboard state is rebuilt from records/replay.json
+records/replay.json
