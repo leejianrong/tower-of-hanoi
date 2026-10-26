@@ -95,20 +95,29 @@ def _episode_durations(
     return [pacing.fast_episode_s / count] * count
 
 
+def record_episodes(replay: ReplayData) -> set[int]:
+    """Episodes that solved the puzzle in fewer steps than any solved episode before them."""
+    records: set[int] = set()
+    best = None
+    for episode in range(replay.episode_count):
+        if not replay.episode_solved[episode]:
+            continue
+        count = len(replay.episode_range(episode))
+        if best is None or count < best:
+            records.add(episode)
+            best = count
+    return records
+
+
 def build_schedule(replay: ReplayData, pacing: Pacing | None = None) -> Schedule:
     pacing = pacing or Pacing()
     step_t0: list[float] = []
     step_dur: list[float] = []
     episode_t0: list[float] = []
     clock = 0.0
-    best = None  # fewest steps of any solved episode so far
+    records = record_episodes(replay)
     for episode in range(replay.episode_count):
-        count = len(replay.episode_range(episode))
-        solved = bool(replay.episode_solved[episode])
-        is_record = solved and (best is None or count < best)
-        if solved:
-            best = count if best is None else min(best, count)
-        durations = _episode_durations(replay, episode, pacing, is_record)
+        durations = _episode_durations(replay, episode, pacing, episode in records)
         episode_t0.append(clock)
         for duration in durations:
             duration = max(round(duration, PRECISION), 10**-PRECISION)

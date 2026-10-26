@@ -27,6 +27,7 @@ def parse(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--speed", type=float, default=1.0, help="playback multiplier")
     parser.add_argument("--workers", type=int, default=max(1, min(4, (os.cpu_count() or 2) // 2)))
     parser.add_argument("--crf", type=int, default=16, help="x264 quality, lower is better")
+    parser.add_argument("--no-audio", action="store_true", help="skip the sound effects")
     parser.add_argument("--theme", choices=["dark", "light"], default="dark")
     return parser.parse_args(argv)
 
@@ -45,7 +46,7 @@ def main(argv: list[str]) -> int:
         out = asyncio.run(
             export_video(
                 replay, args.out, plan, workers=args.workers, crf=args.crf,
-                theme=args.theme, progress=progress,
+                theme=args.theme, audio=not args.no_audio, progress=progress,
             )
         )  # fmt: skip
     except ExportError as error:

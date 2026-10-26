@@ -1,7 +1,7 @@
 # Agent brief
 
 Trust the code and tests over any document, and fix the document. Plan: `PLAN.md`. Decisions:
-`docs/adr/` (0001 to 0002 and 0005 to 0009 are current; 0003 and 0004 are superseded).
+`docs/adr/` (0001 to 0002 and 0005 to 0010 are current; 0003 and 0004 are superseded).
 
 ## What
 
@@ -13,6 +13,8 @@ that replays a training run, built on the `indah` Python UI framework (no Node, 
 - `src/dashboard`: `Player` (what Python shows at a time `t`), the indah app, and `static/`:
   `hanoi-stage.js` (board, pie, transport, the browser clock) and `replay-core.js` (pure lookup and
   animation maths, tested under Node).
+- `src/audio`: `synth.py` (the sounds), `cues.py` (when they play, from the schedule), `mix.py` (the
+  video soundtrack). After editing `synth.py` run `python -m src.audio` and commit the WAVs.
 - `src/video`: video export. `plan.py` is pure; `capture.py` drives headless Chromium and ffmpeg.
 
 ## How

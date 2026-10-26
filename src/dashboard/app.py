@@ -12,7 +12,8 @@ from typing import Any
 
 import indah
 
-from src.dashboard.bundle import build_bundle, routes
+from src.audio.cues import CueSettings, build_cues
+from src.dashboard.bundle import build_bundle, build_cues_bundle, routes
 from src.dashboard.player import Player
 from src.dashboard.theme import THEME
 from src.replay.compact import ReplayData
@@ -196,7 +197,13 @@ def build_session_factory(
     return factory
 
 
-def create_app(replay: ReplayData, pacing: Pacing | None = None, *, kiosk: bool = False):
+def create_app(
+    replay: ReplayData,
+    pacing: Pacing | None = None,
+    *,
+    kiosk: bool = False,
+    cue_settings: CueSettings | None = None,
+):
     register_components()
     schedule = build_schedule(replay, pacing)
     app = indah.create_app(
@@ -207,5 +214,6 @@ def create_app(replay: ReplayData, pacing: Pacing | None = None, *, kiosk: bool 
         density="compact",
         proxy_flush=False,  # no window-buffering proxy on localhost; skips ~8 KB padding per frame
     )
-    app.router.routes[0:0] = routes(build_bundle(replay, schedule))
+    cues = build_cues_bundle(build_cues(replay, schedule, cue_settings))
+    app.router.routes[0:0] = routes(build_bundle(replay, schedule), cues)
     return app

@@ -109,7 +109,7 @@ async def _get(app, path):
             body += message.get("body", b"")
 
     await app(scope, receive, send)
-    return status, body.decode()
+    return status, body.decode(errors="replace")
 
 
 def test_create_app_serves_the_page_the_module_and_the_replay(replay):
@@ -133,3 +133,19 @@ def test_create_app_serves_the_page_the_module_and_the_replay(replay):
     assert bundle[0] == 200
     document = json.loads(bundle[1])
     assert document["replay"]["config"]["num_discs"] == replay.num_discs
+
+
+def test_app_serves_the_cues_and_the_sounds_and_refuses_unknown_ones(replay):
+    app = create_app(replay)
+
+    async def run():
+        return [
+            await _get(app, path)
+            for path in ("/hanoi/cues.json", "/hanoi/audio/lift.wav", "/hanoi/audio/nope.wav")
+        ]
+
+    cues, wav, missing = asyncio.run(run())
+    document = json.loads(cues[1])
+    assert cues[0] == 200 and set(document) == {"names", "t", "sound"}
+    assert wav[0] == 200 and wav[1].startswith("RIFF")
+    assert missing[0] == 404

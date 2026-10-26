@@ -33,11 +33,12 @@ Variable pacing for the video is planned (see [PLAN.md](PLAN.md)).
 
 ## Usage
 
+Sound effects play after your first click or key press (`M` mutes; they are off above 4x).
 Controls: space plays or pauses, the arrow keys step (with shift, jump an episode), the speed buttons
 run 1x to 64x, and the slider scrubs. The dashboard is designed at 1920 x 1080 and scaled to fit any window
 without scrolling; `uv run python -m src.dashboard --kiosk` covers the whole window for screen recording. `?t=120&paused=1` on the URL opens at 120 seconds, paused.
 
-Export a video (needs ffmpeg; one-off setup `uv sync --group video` and
+Export a video with sound (`--no-audio` skips it; needs ffmpeg; one-off setup `uv sync --group video` and
 `uv run playwright install chromium`). It captures every frame, so it is exact but slow, about ten
 minutes per minute of 60 fps video:
 
@@ -70,6 +71,7 @@ Play the game yourself in the terminal with `uv run python -m src.core.game`; mo
 - `src/core`, `src/envs`, `src/agents`: the game, a Gymnasium environment and the Q-learning agent.
 - `src/replay`: converts training telemetry into a compact replay and a watchable timeline.
 - `src/dashboard`: the [indah](https://github.com/leejianrong/indah) app and its browser modules.
+- `src/audio`, `src/video`: generated sound effects and the cues that place them, and the video export.
 - `docs/adr`: architecture decisions. `PLAN.md`: where the project is going.
 
 ## Contributing

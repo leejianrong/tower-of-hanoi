@@ -13,13 +13,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import indah
+from src.audio.cues import CueSettings, build_cues
+from src.audio.mix import render_track
+from src.audio.synth import SAMPLE_RATE, build_sounds, write_wav
 from src.dashboard.app import create_app
 from src.replay.compact import ReplayData
-from src.replay.schedule import Pacing
+from src.replay.schedule import Pacing, build_schedule
 from src.video.plan import (
     ExportPlan,
     concat_args,
     concat_listing,
+    mux_args,
     segment_args,
     split_frames,
 )
@@ -92,6 +96,21 @@ async def capture_segment(
         raise ExportError(f"The page reported errors: {errors[:3]}")
 
 
+def soundtrack(
+    replay: ReplayData,
+    plan: ExportPlan,
+    pacing: Pacing | None = None,
+    cue_settings: CueSettings | None = None,
+):
+    """The mixed sound effects for exactly the span of the video, from the same cues the browser plays."""
+    cues = build_cues(replay, build_schedule(replay, pacing), cue_settings)
+    end = plan.start + plan.frame_count * plan.speed / plan.fps  # exactly as long as the video
+    return render_track(
+        cues, build_sounds(), start=plan.start, end=end, speed=plan.speed,
+        settings=cue_settings, sample_rate=SAMPLE_RATE,
+    )  # fmt: skip
+
+
 async def export_video(
     replay: ReplayData,
     out: Path,
@@ -101,6 +120,8 @@ async def export_video(
     crf: int = 16,
     theme: str = "dark",
     pacing: Pacing | None = None,
+    audio: bool = True,
+    cue_settings: CueSettings | None = None,
     progress: Callable[[int, int], None] | None = None,
 ) -> Path:
     """Render ``plan`` to ``out`` (an .mp4). Raises ExportError on any failure."""
@@ -141,7 +162,14 @@ async def export_video(
                     await browser.close()
             listing = Path(scratch) / "segments.txt"
             listing.write_text(concat_listing(segments))
-            await _run(concat_args(listing, out), "ffmpeg concat")
+            if not audio:
+                await _run(concat_args(listing, out), "ffmpeg concat")
+            else:
+                silent = Path(scratch) / "video.mp4"
+                await _run(concat_args(listing, silent), "ffmpeg concat")
+                track = Path(scratch) / "track.wav"
+                write_wav(track, soundtrack(replay, plan, pacing, cue_settings))
+                await _run(mux_args(silent, track, out), "ffmpeg mux")
     finally:
         handle.stop()
     return out

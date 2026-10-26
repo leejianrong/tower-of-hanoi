@@ -18,6 +18,9 @@ network; the integration fixture trains a small 3-disc agent in about a second. 
 `uv run python -m pytest`, not the `.venv/bin/pytest` script, whose shebang goes stale when the
 repo moves.
 
+Changed a sound in `src/audio/synth.py`? Run `uv run python -m src.audio` and commit the WAVs; a test
+fails if they are stale.
+
 Video export (`make video`) also needs ffmpeg and the optional group: `uv sync --group video`, then
 `uv run playwright install chromium`. Without them the browser tests in `tests/video` are skipped.
 
