@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help sync lint test compile check train replay-data dashboard install-hooks
+.PHONY: help sync lint test compile check train replay-data dashboard video install-hooks
 
 help:
 	@printf '%s\n' \
@@ -13,6 +13,7 @@ help:
 		'  make train         Train the Q-learning agent and write telemetry' \
 		'  make replay-data   Convert training telemetry to the compact replay' \
 		'  make dashboard     Serve the browser dashboard (needs records/replay.json)' \
+		'  make video         Export the dashboard to records/hanoi.mp4 (ARGS="--end 60 --speed 4")' \
 		'  make install-hooks Install the local pre-push hook'
 
 sync:
@@ -39,6 +40,9 @@ replay-data:
 
 dashboard:
 	uv run python -m src.dashboard
+
+video:
+	uv run --group video python -m src.video $(ARGS)
 
 install-hooks:
 	cp scripts/hooks/pre-push .git/hooks/pre-push
