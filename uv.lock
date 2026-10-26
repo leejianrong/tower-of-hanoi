@@ -96,16 +96,12 @@ wheels = [
 [[package]]
 name = "indah"
 version = "0.9.0"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/leejianrong/indah?branch=agent%2Fdashboard-pie#6652189e141b4b661fac81a8244135cc3ff0f943" }
 dependencies = [
     { name = "pydantic" },
     { name = "python-multipart" },
     { name = "starlette" },
     { name = "uvicorn" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ad/47/29c8910501513930eb4ee32dc057170bfa75ae252ebf6c422eeb223ffe22/indah-0.9.0.tar.gz", hash = "sha256:5ad795f87323e69f523c042d3a8dd56cbe68cfb93573580edaf45e8210915bf8", size = 1590829, upload-time = "2026-10-25T12:37:12.719Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/03/9e/97a1238181700ece2844474dcae81c0b2d85500da3f454fe833b7b6ed541/indah-0.9.0-py3-none-any.whl", hash = "sha256:2fb5965f4276efdb216b3b0fc2bb789cecf1bab37c131298451e206f397a9dc0", size = 562147, upload-time = "2026-10-25T12:37:10.961Z" },
 ]
 
 [[package]]
@@ -424,7 +420,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "gymnasium", specifier = ">=1.2.3" },
-    { name = "indah", specifier = ">=0.9.0" },
+    { name = "indah", git = "https://github.com/leejianrong/indah?branch=agent%2Fdashboard-pie" },
     { name = "numpy", specifier = ">=2.4.0" },
     { name = "starlette", specifier = ">=1.10.0" },
 ]

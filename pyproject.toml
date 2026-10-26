@@ -22,3 +22,8 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
+
+# The dashboard uses indah features (Frame, chart kinds, heatmap marks) that are not in a release
+# yet. Pinned to the branch until indah ships them; the lockfile holds the exact commit.
+[tool.uv.sources]
+indah = { git = "https://github.com/leejianrong/indah", branch = "agent/dashboard-pie" }

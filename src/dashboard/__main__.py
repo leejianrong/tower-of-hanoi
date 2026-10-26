@@ -1,4 +1,7 @@
-"""Run the dashboard: ``python -m src.dashboard [replay.json]``."""
+"""Run the dashboard: ``python -m src.dashboard [replay.json] [--kiosk]``.
+
+``--kiosk`` covers the whole window (hiding indah's header), for screen recording.
+"""
 
 import sys
 from pathlib import Path
@@ -11,8 +14,10 @@ from src.replay.compact import ReplayData
 
 
 def main(argv: list[str]) -> int:
-    path = Path(argv[0]) if argv else RECORD_DIR / "replay.json"
-    indah.launch(create_app(ReplayData.load(path)))
+    kiosk = "--kiosk" in argv
+    paths = [a for a in argv if not a.startswith("--")]
+    path = Path(paths[0]) if paths else RECORD_DIR / "replay.json"
+    indah.launch(create_app(ReplayData.load(path), kiosk=kiosk))
     return 0
 
 
