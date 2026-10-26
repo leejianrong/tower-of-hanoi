@@ -30,4 +30,8 @@ that replays a training run, built on the `indah` Python UI framework (no Node, 
 - Do not install packages outside `pyproject.toml` (the dev group has what tests need); the tests
   call the ASGI app directly instead of using starlette's test client for that reason.
 - Do not commit `records/*.json`, except the one fixture already tracked.
-- Branch per slice, PR into `main`; `scripts/hooks/pre-push` runs `make check`.
+- Branch per slice, PR into `main`; `scripts/hooks/pre-push` runs `make check`. Merge with
+  `gh pr merge --squash` once CI is green. Commits must use the GitHub noreply email: the private
+  one is rejected on push.
+- Update README, PLAN and the ADRs in the PR that changes what they describe; the README
+  screenshot is `docs/img/dashboard.png`, retake it when the layout changes.
