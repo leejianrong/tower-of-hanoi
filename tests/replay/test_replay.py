@@ -158,7 +158,7 @@ def test_schedule_locates_every_step_start_and_end_of_run(replay):
 
 
 def test_schedule_is_slow_at_the_start_and_for_the_final_optimal_episode(replay):
-    pacing = Pacing()
+    pacing = Pacing(constant_step_s=None)
     schedule = build_schedule(replay, pacing)
     assert schedule.step_dur[0] == pacing.intro_step_s
     if replay.episode_optimal[-1]:
@@ -184,7 +184,7 @@ def test_replay_from_an_older_version_says_how_to_rebuild_it(replay):
 
 
 def test_schedule_caps_solved_episodes_and_slows_new_records(replay):
-    pacing = Pacing(intro_episodes=0, solved_cap_s=0.5, record_cap_s=3.0, record_step_s=0.2)
+    pacing = Pacing(constant_step_s=None, intro_episodes=0, solved_cap_s=0.5, record_cap_s=3.0, record_step_s=0.2)
     schedule = build_schedule(replay, pacing)
     best = None
     seen_record = False
@@ -203,3 +203,10 @@ def test_schedule_caps_solved_episodes_and_slows_new_records(replay):
         if solved:
             best = len(steps) if best is None else min(best, len(steps))
     assert seen_record
+
+
+def test_default_pacing_gives_every_step_the_same_duration(replay):
+    pacing = Pacing()
+    schedule = build_schedule(replay, pacing)
+    assert pacing.constant_step_s == 0.6
+    assert set(schedule.step_dur) == {0.6}

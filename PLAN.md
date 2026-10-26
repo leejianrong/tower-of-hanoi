@@ -72,11 +72,12 @@ Found while building slice 2; slice 4 upstreams the generic ones.
 
 ## Pacing
 
-`Pacing` in `src/replay/schedule.py` sets the length of the video. The first run took 19 minutes at
-1x because 172 solved episodes played at 0.06 s a step. Now a solved episode is capped at 2 s, one
-that beats the best so far is slowed (0.15 s a step, up to 8 s), a failed one flashes by in 0.3 s:
-the 655-episode run plays in about 10.8 minutes. Tune it by editing the defaults; the controls scale
-it from 1x to 64x.
+`Pacing` in `src/replay/schedule.py` sets the length of the video. For now every step lasts a
+constant 0.6 s (`constant_step_s`), so the 85,456-step run is about 14 hours at 1x (about 13 minutes
+at 64x). The storyboard rules are kept behind `Pacing(constant_step_s=None)`: slow intro, solved
+episodes capped at 2 s, record episodes slowed (0.15 s a step, up to 8 s), failed ones flashing by
+in 0.3 s, a slow final solve (about 10.8 minutes in total). They come back once the video has a
+script and a storyboard.
 
 ## Risks
 

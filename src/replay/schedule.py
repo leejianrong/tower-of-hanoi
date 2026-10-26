@@ -21,6 +21,9 @@ PRECISION = 4
 
 @dataclass(frozen=True)
 class Pacing:
+    # While set, every step lasts this long and the rules below are ignored. Set it to None to
+    # get the storyboard pacing back (slow intro, capped solves, slow records, flashing fails).
+    constant_step_s: float | None = 0.6
     intro_episodes: int = 3  # the first episodes play slowly so the rules are visible
     intro_step_s: float = 0.7
     intro_slow_steps: int = 24  # after this many steps an intro episode speeds up
@@ -76,6 +79,8 @@ def _episode_durations(
     count = len(replay.episode_range(episode))
     if count == 0:
         return []
+    if pacing.constant_step_s is not None:
+        return [pacing.constant_step_s] * count
     final = episode == replay.episode_count - 1 and bool(replay.episode_optimal[episode])
     if final:
         return [pacing.final_step_s] * count
