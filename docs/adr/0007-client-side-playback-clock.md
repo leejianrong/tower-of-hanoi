@@ -17,7 +17,8 @@ that do not depend on network timing.
 1. Every visible value is a function of one number, the clock `t` in seconds. `Player.frame()`
    is that function (`src/dashboard/player.py`) and imports nothing from indah or a browser.
 2. All pacing decisions live in Python (`src/replay/schedule.py`): which episodes play slowly,
-   which flash by, how long each step is on screen. The result is a timeline of step start times
+   which flash by, how long each step is on screen. Today every step lasts a constant 0.6 s
+   (`Pacing.constant_step_s`); the storyboard rules return once the video has a script. The result is a timeline of step start times
    and durations.
 3. Slice 2 runs the clock on the server at 10 Hz and pushes frames as patches. This proves the
    layout and the function-of-time design.

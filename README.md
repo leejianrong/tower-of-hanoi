@@ -2,7 +2,7 @@
 
 Train a Q-learning agent on 5-disc Tower of Hanoi, then replay every episode in the browser: the
 board, the explore-or-exploit decision, the whole Q-table and the learning curves on one screen,
-paced to be watched and recorded.
+built to be screen-recorded.
 
 ```mermaid
 flowchart LR
@@ -11,7 +11,7 @@ flowchart LR
     C -->|make dashboard| D[browser dashboard]
 ```
 
-![The dashboard mid-run: a disc lifting off one rod, the explore/exploit pie, five charts and the Q-table](docs/img/dashboard.png)
+![The dashboard at episode 532: a disc lifting off a rod, the explore/exploit pie, five charts and the Q-table](docs/img/dashboard.png)
 
 The board animates (a disc lifts over its rod, travels across and lands on the other stack), and
 the charts and Q-table follow the clock. The whole dashboard fits one screen at any window size. The
@@ -23,11 +23,13 @@ Needs Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync                # install
-make train             # about 30 s: trains, then writes records/replay.json
-make dashboard         # prints a local URL; open it in a browser (plays about 11 minutes at 1x)
+make train             # about 20 s: trains, then writes records/replay.json
+make dashboard         # prints a local URL; open it in a browser
 ```
 
-Seed 7 reaches its first optimal 31-move solution at episode 655.
+Seed 7 reaches its first optimal 31-move solution at episode 655. Every step plays for 0.6 s, so
+the whole run is about 14 hours at 1x: use the 64x button (about 13 minutes) or drag the slider.
+Variable pacing for the video is planned (see [PLAN.md](PLAN.md)).
 
 ## Usage
 

@@ -1,6 +1,6 @@
 # Plan: browser dashboard for the Q-learning replay
 
-Status: slices 1 to 4 done (the indah features await review upstream), slice 5 next. Supersedes the Pygame plan in `docs/archive/`.
+Status: slices 1 to 4 done (the indah features are in review upstream, indah PR 272), slice 5 next. Supersedes the Pygame plan in `docs/archive/`.
 
 ## Goal
 
@@ -30,7 +30,7 @@ every update crosses the network, and the video would depend on timing.
 *Client clock:* the browser gets the whole replay once, then runs its own clock and draws each
 frame itself. Python still decides the pacing (the timeline), the browser only follows it. Motion
 is smooth, scrubbing is instant, and an exporter can advance the clock by hand, one frame at a
-time. Slice 2 uses the server clock on purpose, to prove the layout; slice 3 swaps it.
+time. Slice 2 used the server clock to prove the layout; slice 3 replaced it with the browser clock.
 
 ## Shape
 

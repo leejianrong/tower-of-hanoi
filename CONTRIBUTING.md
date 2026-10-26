@@ -8,11 +8,12 @@ make install-hooks   # runs `make check` before every push
 ```
 
 Python 3.11+, [uv](https://docs.astral.sh/uv/). The dashboard depends on `indah`, which ships its
-own pre-built frontend: no Node is needed.
+own pre-built frontend. Node 20+ is needed only to run the browser-maths tests in `make check`.
 
 ## Checks
 
-`make check` runs ruff, pytest and a compile check. Tests are deterministic and need no display or
+`make check` runs ruff, pytest, the Node tests for the browser maths (`tests/js`) and a compile
+check. Tests are deterministic and need no display or
 network; the integration fixture trains a small 3-disc agent in about a second. Use
 `uv run python -m pytest`, not the `.venv/bin/pytest` script, whose shebang goes stale when the
 repo moves.
