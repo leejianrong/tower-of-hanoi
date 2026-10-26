@@ -1,7 +1,9 @@
 [project]
 name = "tower-of-hanoi"
 version = "0.1.0"
-description = "Tower of Hanoi game logic, Gymnasium environment, Q-learning agent, and Pygame replay visualizer."
+description = "Tower of Hanoi game logic, Gymnasium environment, Q-learning agent, and a browser replay dashboard built on indah."
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

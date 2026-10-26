@@ -69,4 +69,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Run `make check` before pushing.
 
 ## License
 
-No licence file yet, so all rights are reserved until one is added.
+Apache License 2.0, see [LICENSE](LICENSE).
