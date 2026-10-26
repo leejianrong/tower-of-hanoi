@@ -14,8 +14,8 @@ flowchart LR
 ![The dashboard at episode 532: a disc lifting off a rod, the explore/exploit pie, five charts and the Q-table](docs/img/dashboard.png)
 
 The board animates (a disc lifts over its rod, travels across and lands on the other stack), and
-the charts and Q-table follow the clock. The whole dashboard fits one screen at any window size. The
-next step is exporting it as a video; see [PLAN.md](PLAN.md).
+the charts and Q-table follow the clock. The whole dashboard fits one screen at any window size. It exports
+to video frame by frame; see [PLAN.md](PLAN.md) for what is next.
 
 ## Quick start
 
@@ -36,6 +36,15 @@ Variable pacing for the video is planned (see [PLAN.md](PLAN.md)).
 Controls: space plays or pauses, the arrow keys step (with shift, jump an episode), the speed buttons
 run 1x to 64x, and the slider scrubs. The dashboard is designed at 1920 x 1080 and scaled to fit any window
 without scrolling; `uv run python -m src.dashboard --kiosk` covers the whole window for screen recording. `?t=120&paused=1` on the URL opens at 120 seconds, paused.
+
+Export a video (needs ffmpeg; one-off setup `uv sync --group video` and
+`uv run playwright install chromium`). It captures every frame, so it is exact but slow, about ten
+minutes per minute of 60 fps video:
+
+```bash
+make video ARGS="--start 300 --end 330 --out records/clip.mp4"      # 30 s of the timeline
+make video ARGS="--speed 64 --fps 30"                                # the whole run at 64x
+```
 
 Replay the run you just trained, or point the dashboard at another replay file:
 

@@ -5,8 +5,10 @@
 // clock (replay-core.js). Python is told where the playhead is, a few times a second, through the
 // `tick` event, so the charts and the Q-table follow this clock rather than lead it.
 //
-// URL parameters, for screenshots and for the exporter later: ?t=<seconds> starts there, and
-// ?paused=1 starts paused.
+// URL parameters: ?t=<seconds> starts there, ?paused=1 starts paused, and ?record=1 is the video
+// exporter's mode (ADR-0009): the clock never advances by itself, the controls are hidden, nothing
+// animates in real time, and `window.hanoiRecorder.seek(t)` moves the clock and resolves once the
+// board and Python's charts show that exact time.
 const NS = "http://www.w3.org/2000/svg";
 const BASE_URL = new URL("../../hanoi/", import.meta.url);
 const GEOM = { rodX: [100, 280, 460], base: 256, discH: 28, lift: 30 };
@@ -27,6 +29,8 @@ svg.board { width: 100%; height: auto; display: block; }
 .pie .explore { color: var(--x-explore); text-align: right; }
 .pie .exploit { color: var(--x-exploit); }
 .pie .dim { opacity: 0.4; }
+:host([record]) * { transition: none !important; }
+:host([record]) .transport { visibility: hidden; }
 .pie path { transition: opacity 150ms, transform 150ms; }
 .transport { flex: 1 1 360px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -84,6 +88,8 @@ export default class HanoiStage extends HTMLElement {
     this._lastNow = 0;
     this._lastTick = 0;
     this._drawn = { t: NaN, pie: "" };
+    this._appliedT = null;
+    this._waiter = null;
     this._onKey = (e) => this._key(e);
   }
 
@@ -117,11 +123,59 @@ export default class HanoiStage extends HTMLElement {
       this._buildPie();
       this._syncControls();
       this._emitTick();
+      if (params.has("record")) {
+        this._startRecorder();
+        return;
+      }
       this._lastNow = performance.now();
       this._raf = requestAnimationFrame((now) => this._frame(now));
     } catch (error) {
       this._note.textContent = "The replay could not be loaded. Run `make train`, then restart the dashboard.";
       console.error(error);
+    }
+  }
+
+  // ---- recording -------------------------------------------------------------------------
+
+  /** Python sets this to the playhead it last applied; the recorder waits for it to match. */
+  set applied_t(value) {
+    this._appliedT = value;
+    this._settle();
+  }
+
+  get applied_t() {
+    return this._appliedT;
+  }
+
+  _startRecorder() {
+    this.setAttribute("record", "");
+    this._playing = false;
+    this._render();
+    window.hanoiRecorder = {
+      totalS: this._data.schedule.total_s,
+      seek: (t) => this._recordSeek(t),
+    };
+  }
+
+  /** Show time ``t`` everywhere, then resolve after the page has painted it. */
+  async _recordSeek(t) {
+    this._t = Math.min(Math.max(Number(t) || 0, 0), this._data.schedule.total_s);
+    this._render();
+    const sent = Math.round(this._t * 1000) / 1000;
+    const acknowledged = new Promise((resolve) => {
+      this._waiter = { t: sent, resolve };
+    });
+    this._emitTick();
+    this._settle();
+    await acknowledged;
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  }
+
+  _settle() {
+    if (this._waiter && this._appliedT === this._waiter.t) {
+      const { resolve } = this._waiter;
+      this._waiter = null;
+      resolve();
     }
   }
 

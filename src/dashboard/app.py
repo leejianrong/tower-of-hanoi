@@ -36,6 +36,7 @@ def build_session_factory(
         episode = indah.Signal(frame.value.episode)
         step = indah.Signal(frame.value.step)
         applied = indah.Signal(frame.value.applied)
+        applied_t = indah.Signal(None)  # last playhead applied; the video exporter waits on it
 
         def on_tick(detail: Any) -> None:
             """The browser's clock, in seconds. Ignore anything that is not a number."""
@@ -48,8 +49,11 @@ def build_session_factory(
             episode.set(current.episode)
             step.set(current.step)
             applied.set(current.applied)
+            applied_t.set(round(float(t), 3))  # last: everything above has been patched by then
 
-        stage = indah.custom("hanoi-stage", caption="Board and playback", on_tick=on_tick)
+        stage = indah.custom(
+            "hanoi-stage", caption="Board and playback", applied_t=applied_t, on_tick=on_tick
+        )
 
         header = indah.Row(
             align="center",

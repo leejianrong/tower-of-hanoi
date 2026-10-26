@@ -1,6 +1,6 @@
 # Plan: browser dashboard for the Q-learning replay
 
-Status: slices 1 to 4 done (the indah features are in review upstream, indah PR 272), slice 5 next. Supersedes the Pygame plan in `docs/archive/`.
+Status: slices 1 to 5 done (the indah features are in review upstream, indah PR 272), slice 6 next. Supersedes the Pygame plan in `docs/archive/`.
 
 ## Goal
 
@@ -19,6 +19,7 @@ like this and upstream it. Where indah falls short we say so here rather than wo
 | Build on indah in the browser, remove Pygame | Pygame crashed WSL; the layout outgrew hand-drawn UI | 0006 |
 | Every frame is a pure function of one clock; the clock moves to the browser | Smooth 60 fps motion, scrubbing, deterministic video export | 0007 |
 | Derive a compact columnar replay (2.7 MB) from telemetry (70 MB) | The Q-table is reproducible from the updates | 0008 |
+| Export by stepping the clock and capturing every frame, with an acknowledgement from Python | Repeatable video; a screen recording drops frames | 0009 |
 | Board and pie live in this repo as indah bridge modules first, upstream later | Prove them before widening indah | 0006 |
 
 ### Server clock vs client clock
@@ -52,7 +53,7 @@ flowchart LR
 | 2 | Dashboard on today's indah with a server clock: layout, charts, heatmap, board and pie modules (no motion) | Done |
 | 3 | Browser clock, board animation (lift, travel over, descend; no arrow), transport and scrubbing, pacing caps | Done |
 | 4 | Indah features below (indah ADR-0044): fixed frame, scatter and bar charts, heatmap masks and highlights, pie | Done; built on indah branch `agent/dashboard-pie`, pinned in `pyproject.toml` until released |
-| 5 | Deterministic clock, `?record` mode, frame capture and ffmpeg export | |
+| 5 | Deterministic clock, `?record` mode, frame capture and ffmpeg export | Done (`make video`, ADR-0009) |
 | 6 | Sound cues synced to the clock (ADR-0005), auto-pacing polish | |
 
 ## What indah lacks for this dashboard
@@ -84,5 +85,5 @@ script and a storyboard.
 - The charts and the Q-table follow the browser clock through the server, so they trail the board by
   up to one tick (200 ms, 50 ms at 16x and above). Moving them client-side needs G2, G3 and G7.
 - The Q update appears when the disc has landed (90% of the step, `UPDATE_PHASE`); change it freely.
-- Headless Chromium works under WSL (screenshots in this repo's history were taken with it) but is
-  heavy; export in slice 5 may still fall back to a Windows screen recorder.
+- Export runs at about 6 frames a second (two workers), so a long video takes a while; more workers
+  or a lower resolution speed it up.
