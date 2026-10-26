@@ -92,3 +92,19 @@ export function pieAt(replay, step) {
   const episode = episodeOfStep(replay, step);
   return { epsilon: replay.episodes.epsilon[episode], explore: replay.steps.explore[step] === 1 };
 }
+
+// The cues passed as the clock moves from ``from`` to ``to``: indices [lo, hi) of the cue list
+// with from < t <= to (like Python's Cues.between). The cue list is sorted by time.
+export function cuesBetween(cues, from, to) {
+  const upper = (value) => {
+    let lo = 0;
+    let hi = cues.t.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (cues.t[mid] <= value) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  };
+  return [upper(from), upper(to)];
+}

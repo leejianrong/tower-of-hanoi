@@ -1,6 +1,6 @@
 # Plan: browser dashboard for the Q-learning replay
 
-Status: slices 1 to 5 done (the indah features are in review upstream, indah PR 272), slice 6 next. Supersedes the Pygame plan in `docs/archive/`.
+Status: slices 1 to 6 done (the indah features are in review upstream, indah PR 272). Next: storyboard and script, then tune `Pacing` and `CueSettings`. Supersedes the Pygame plan in `docs/archive/`.
 
 ## Goal
 
@@ -20,6 +20,7 @@ like this and upstream it. Where indah falls short we say so here rather than wo
 | Every frame is a pure function of one clock; the clock moves to the browser | Smooth 60 fps motion, scrubbing, deterministic video export | 0007 |
 | Derive a compact columnar replay (2.7 MB) from telemetry (70 MB) | The Q-table is reproducible from the updates | 0008 |
 | Export by stepping the clock and capturing every frame, with an acknowledgement from Python | Repeatable video; a screen recording drops frames | 0009 |
+| Sound cues come from the timeline in Python and are shared by the browser and the exporter | One list means live and video cannot drift | 0010 |
 | Board and pie live in this repo as indah bridge modules first, upstream later | Prove them before widening indah | 0006 |
 
 ### Server clock vs client clock
@@ -54,7 +55,7 @@ flowchart LR
 | 3 | Browser clock, board animation (lift, travel over, descend; no arrow), transport and scrubbing, pacing caps | Done |
 | 4 | Indah features below (indah ADR-0044): fixed frame, scatter and bar charts, heatmap masks and highlights, pie | Done; built on indah branch `agent/dashboard-pie`, pinned in `pyproject.toml` until released |
 | 5 | Deterministic clock, `?record` mode, frame capture and ffmpeg export | Done (`make video`, ADR-0009) |
-| 6 | Sound cues synced to the clock (ADR-0005), auto-pacing polish | |
+| 6 | Sound cues synced to the clock (ADR-0005, ADR-0010), played live and mixed into the video | Done; pacing polish waits for the storyboard |
 
 ## What indah lacks for this dashboard
 

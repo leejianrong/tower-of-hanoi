@@ -108,3 +108,13 @@ test("pieAt reports epsilon of the episode and whether the step explored", () =>
   assert.deepEqual(pieAt(replay, 1), { epsilon: 1.0, explore: false });
   assert.deepEqual(pieAt(replay, 2), { epsilon: 0.5, explore: true });
 });
+
+test("cuesBetween: the cues passed as the clock moves, from exclusive to inclusive", async () => {
+  const { cuesBetween } = await import("../../src/dashboard/static/replay-core.js");
+  const cues = { t: [0.5, 1, 1, 2.5] };
+  assert.deepEqual(cuesBetween(cues, -1, 0.4), [0, 0]);
+  assert.deepEqual(cuesBetween(cues, -1, 0.5), [0, 1]);
+  assert.deepEqual(cuesBetween(cues, 0.5, 1), [1, 3]);
+  assert.deepEqual(cuesBetween(cues, 1, 1), [3, 3]);
+  assert.deepEqual(cuesBetween(cues, 1, 9), [3, 4]);
+});

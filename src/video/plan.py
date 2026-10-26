@@ -63,3 +63,12 @@ def concat_args(listing: Path, out: Path) -> list[str]:
 
 def concat_listing(segments: list[Path]) -> str:
     return "".join(f"file '{segment.resolve()}'\n" for segment in segments)
+
+
+def mux_args(video: Path, audio: Path, out: Path) -> list[str]:
+    """Add the soundtrack to the finished video without re-encoding the picture."""
+    return [
+        "ffmpeg", "-y", "-loglevel", "error", "-i", str(video), "-i", str(audio),
+        "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+        "-movflags", "+faststart", str(out),
+    ]  # fmt: skip

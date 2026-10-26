@@ -68,3 +68,28 @@ def test_bundle_carries_what_the_browser_needs(replay):
     assert len(document["replay"]["steps"]["disc"]) == replay.step_count
     assert len(document["schedule"]["step_t0"]) == replay.step_count
     assert len(bundle.gz) < len(bundle.raw)
+
+
+def test_cue_lookup_agrees_with_python(tmp_path, replay):
+    from src.audio.cues import build_cues
+
+    cues = build_cues(replay, build_schedule(replay))
+    probe = tmp_path / "cues.mjs"
+    probe.write_text(
+        f"""
+import {{ readFileSync }} from "node:fs";
+import {{ cuesBetween }} from "{(STATIC / "replay-core.js").as_uri()}";
+const {{ cues, windows }} = JSON.parse(readFileSync(process.argv[2], "utf8"));
+process.stdout.write(JSON.stringify(windows.map(([a, b]) => cuesBetween(cues, a, b))));
+"""
+    )
+    last = cues.t[-1]
+    edges = [-1.0, 0.0, cues.t[0], cues.t[1], cues.t[len(cues) // 2], last, last + 1]
+    windows = [[a, b] for a in edges for b in edges if b >= a]
+    request = tmp_path / "request.json"
+    request.write_text(json.dumps({"cues": cues.to_json(), "windows": windows}))
+    result = subprocess.run(
+        ["node", str(probe), str(request)], capture_output=True, text=True, check=True
+    )
+    got = json.loads(result.stdout)
+    assert got == [[r.start, r.stop] for r in (cues.between(a, b) for a, b in windows)]

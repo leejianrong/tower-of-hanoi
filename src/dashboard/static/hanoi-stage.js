@@ -72,6 +72,26 @@ const ICONS = {
   pause: "M7 5h3.5v14H7zM13.5 5H17v14h-3.5z",
   stepForward: "M7 6v12l8-6z",
   nextEpisode: "M17 6h2v12h-2zM5 6l9 6-9 6z",
+  soundOn: "M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02z",
+  soundOff:
+    "M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.8 8.8 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.99 8.99 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z",
+};
+const SOUND_KEY = "hanoi-sound";
+const MAX_SOUND_SPEED = 4; // faster playback drops the sounds (src/audio/cues.py CueSettings)
+const MAX_CUES_PER_FRAME = 6; // after a stall, play none rather than a burst
+const readPreference = () => {
+  try {
+    return localStorage.getItem(SOUND_KEY) !== "off";
+  } catch {
+    return true;
+  }
+};
+const writePreference = (on) => {
+  try {
+    localStorage.setItem(SOUND_KEY, on ? "on" : "off");
+  } catch {
+    /* private window: the choice just does not persist */
+  }
 };
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
@@ -90,6 +110,11 @@ export default class HanoiStage extends HTMLElement {
     this._drawn = { t: NaN, pie: "" };
     this._appliedT = null;
     this._waiter = null;
+    this._sound = readPreference();
+    this._audio = null; // { ctx, cues, buffers } once the sounds are loaded
+    this._audioLoading = false;
+    this._skipCues = true; // the frame after a seek or a pause must not play the cues it jumped over
+    this._onGesture = () => this._wakeAudio();
     this._onKey = (e) => this._key(e);
   }
 
@@ -97,12 +122,17 @@ export default class HanoiStage extends HTMLElement {
     this.style.display = "block";
     this._build();
     window.addEventListener("keydown", this._onKey);
+    window.addEventListener("pointerdown", this._onGesture);
+    window.addEventListener("keydown", this._onGesture);
     this._load();
   }
 
   disconnectedCallback() {
     cancelAnimationFrame(this._raf);
     window.removeEventListener("keydown", this._onKey);
+    window.removeEventListener("pointerdown", this._onGesture);
+    window.removeEventListener("keydown", this._onGesture);
+    this._audio?.ctx.close();
   }
 
   async _load() {
@@ -204,6 +234,7 @@ export default class HanoiStage extends HTMLElement {
       return b;
     };
     this._playButton = button("Pause", ICONS.pause, () => this._toggle(), "main");
+    this._soundButton = button("Sound", ICONS.soundOn, () => this._toggleSound(), "sound");
     this._speedButtons = SPEEDS.map((s) => {
       const b = html("button", { type: "button", textContent: `${s}x`, onclick: () => this._setSpeed(s) });
       b.setAttribute("aria-label", `Speed ${s} times`);
@@ -224,7 +255,7 @@ export default class HanoiStage extends HTMLElement {
       this._playButton,
       button("Next step", ICONS.stepForward, () => this._jumpStep(1)),
       button("Next episode", ICONS.nextEpisode, () => this._jumpEpisode(1)),
-      html("div", { className: "speeds" }, ...this._speedButtons),
+      html("div", { className: "speeds" }, this._soundButton, ...this._speedButtons),
     );
     return html("div", { className: "transport" }, controls, html("div", { className: "scrub" }, this._slider, this._time));
   }
@@ -279,7 +310,9 @@ export default class HanoiStage extends HTMLElement {
     this._lastNow = now;
     const total = this._data.schedule.total_s;
     if (this._playing && this._t < total) {
+      const before = this._t;
       this._t = Math.min(this._t + dt * this._speed, total);
+      this._playCues(before, this._t);
       if (this._t >= total) {
         this._playing = false;
         this._syncControls();
@@ -347,6 +380,60 @@ export default class HanoiStage extends HTMLElement {
     this._pieSvg.setAttribute("aria-label", `Epsilon pie: ${pct(epsilon)} explore. The agent is ${explore ? "exploring" : "exploiting"}.`);
   }
 
+  // ---- sound -----------------------------------------------------------------------------
+
+  /** Browsers only allow audio after a gesture, so the sounds load on the first click or key. */
+  async _wakeAudio() {
+    if (!this._sound || !this._data || this.hasAttribute("record") || this._audioLoading) return;
+    if (this._audio) {
+      if (this._audio.ctx.state === "suspended") this._audio.ctx.resume();
+      return;
+    }
+    this._audioLoading = true;
+    try {
+      const ctx = new AudioContext();
+      const cues = await (await fetch(new URL("cues.json", BASE_URL))).json();
+      const buffers = {};
+      await Promise.all(
+        cues.names.map(async (name) => {
+          const bytes = await (await fetch(new URL(`audio/${name}.wav`, BASE_URL))).arrayBuffer();
+          buffers[name] = await ctx.decodeAudioData(bytes);
+        }),
+      );
+      this._audio = { ctx, cues, buffers };
+      this._skipCues = true;
+    } catch (error) {
+      console.warn("Sound is unavailable", error);
+      this._sound = false;
+      this._syncControls();
+    } finally {
+      this._audioLoading = false;
+    }
+  }
+
+  _playCues(from, to) {
+    const skip = this._skipCues;
+    this._skipCues = false;
+    if (skip || !this._sound || !this._audio || this._speed > MAX_SOUND_SPEED) return;
+    const { ctx, cues, buffers } = this._audio;
+    const [lo, hi] = this._core.cuesBetween(cues, from, to);
+    if (hi - lo > MAX_CUES_PER_FRAME) return;
+    for (let i = lo; i < hi; i++) {
+      const source = ctx.createBufferSource();
+      source.buffer = buffers[cues.names[cues.sound[i]]];
+      source.connect(ctx.destination);
+      source.start();
+    }
+  }
+
+  _toggleSound() {
+    this._sound = !this._sound;
+    writePreference(this._sound);
+    this._skipCues = true;
+    this._syncControls();
+    if (this._sound) this._wakeAudio();
+  }
+
   _emitTick(now = performance.now()) {
     this._lastTick = now;
     this._tickPending = false;
@@ -359,6 +446,7 @@ export default class HanoiStage extends HTMLElement {
     if (!this._data) return;
     if (!this._playing && this._t >= this._data.schedule.total_s) this._t = 0;
     this._playing = !this._playing;
+    this._skipCues = true;
     this._lastNow = performance.now();
     this._syncControls();
     this._tickPending = true;
@@ -371,6 +459,7 @@ export default class HanoiStage extends HTMLElement {
 
   _seek(t) {
     this._t = Math.min(Math.max(t, 0), this._data.schedule.total_s);
+    this._skipCues = true;
     this._tickPending = true;
   }
 
@@ -396,6 +485,9 @@ export default class HanoiStage extends HTMLElement {
     const label = this._playing ? "Pause" : "Play";
     this._playButton.setAttribute("aria-label", label);
     this._playButton.replaceChildren(icon(this._playing ? ICONS.pause : ICONS.play));
+    this._soundButton.setAttribute("aria-pressed", String(this._sound));
+    this._soundButton.setAttribute("aria-label", this._sound ? "Mute sound" : "Turn sound on");
+    this._soundButton.replaceChildren(icon(this._sound ? ICONS.soundOn : ICONS.soundOff));
     SPEEDS.forEach((s, i) => this._speedButtons[i].setAttribute("aria-pressed", String(s === this._speed)));
   }
 
@@ -403,6 +495,7 @@ export default class HanoiStage extends HTMLElement {
     if (!this._data || event.target !== document.body || event.metaKey || event.ctrlKey || event.altKey) return;
     if (event.code === "Space") this._toggle();
     else if (event.code === "ArrowRight") event.shiftKey ? this._jumpEpisode(1) : this._jumpStep(1);
+    else if (event.code === "KeyM") this._toggleSound();
     else if (event.code === "ArrowLeft") event.shiftKey ? this._jumpEpisode(-1) : this._jumpStep(-1);
     else return;
     event.preventDefault();
