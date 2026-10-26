@@ -15,6 +15,8 @@ from src.replay.encoding import decode_state
 from src.replay.qtable import QReplayer, q_deltas
 from src.replay.schedule import Schedule
 
+AVERAGE_WINDOW = 25  # episodes in the reward chart's moving average
+
 # The step's Q update lands this far through its animation: the disc has all but settled
 # (replay-core.js PHASE: lift, travel, then the descent that ends the step).
 UPDATE_PHASE = 0.9
@@ -40,6 +42,8 @@ class Frame:
     step_reward: float
     episode_return: float  # cumulative reward in this episode, up to and including this step
     applied: int  # how many Q updates are visible
+    state_id: int  # the state before the move, as a heatmap column
+    action: int  # the move taken, as a heatmap row
 
 
 class Player:
@@ -50,6 +54,29 @@ class Player:
         self._q = QReplayer(replay)
         self._dq = q_deltas(replay)
         self._cumulative = self._episode_cumulative()
+        self._average = self._moving_average(replay.episode_reward, AVERAGE_WINDOW)
+        self._best_before = self._best_solved_before()
+
+    @staticmethod
+    def _moving_average(values: list[float], window: int) -> list[float]:
+        out: list[float] = []
+        total = 0.0
+        for i, value in enumerate(values):
+            total += value
+            if i >= window:
+                total -= values[i - window]
+            out.append(total / min(i + 1, window))
+        return out
+
+    def _best_solved_before(self) -> list[int]:
+        """For each episode, the earlier solved episode with the fewest steps (-1 if none)."""
+        best, best_steps, out = -1, None, []
+        for e in range(self.replay.episode_count):
+            out.append(best)
+            steps = len(self.replay.episode_range(e))
+            if self.replay.episode_solved[e] and (best_steps is None or steps < best_steps):
+                best, best_steps = e, steps
+        return out
 
     def _episode_cumulative(self) -> list[float]:
         out: list[float] = []
@@ -97,6 +124,8 @@ class Player:
             step_reward=replay.step_reward[step],
             episode_return=self._cumulative[step],
             applied=step + 1 if landed else step,
+            state_id=replay.step_state[step],
+            action=replay.step_action[step],
         )
 
     def q_table(self, applied: int) -> np.ndarray:
@@ -113,6 +142,52 @@ class Player:
         ]
 
     # -- series for the charts ---------------------------------------------------------------
+
+    def reward_points(self, upto: int) -> list[list[float | None]]:
+        """``[episode, reward if solved, reward if not, moving average]`` for episodes before ``upto``."""
+        r = self.replay
+        return [
+            [
+                e + 1,
+                r.episode_reward[e] if r.episode_solved[e] else None,
+                None if r.episode_solved[e] else r.episode_reward[e],
+                round(self._average[e], 3),
+            ]
+            for e in range(upto)
+        ]
+
+    def step_points(self, upto: int) -> list[list[float | None]]:
+        """``[episode, steps if solved, steps if not]`` for episodes before ``upto``."""
+        r = self.replay
+        rows = []
+        for e in range(upto):
+            steps = r.episode_start[e + 1] - r.episode_start[e]
+            solved = bool(r.episode_solved[e])
+            rows.append([e + 1, steps if solved else None, None if solved else steps])
+        return rows
+
+    def return_vs_best(self, episode: int, upto_step: int) -> list[list[float | None]]:
+        """``[step, return now, return in the best solved episode so far]``, one row per step."""
+        first = self.replay.episode_start[episode]
+        now = [self._cumulative[s] for s in range(first, upto_step + 1)]
+        best = self._best_before[episode]
+        ghost = (
+            [self._cumulative[s] for s in self.replay.episode_range(best)] if best >= 0 else []
+        )
+        return [
+            [i + 1, now[i] if i < len(now) else None, ghost[i] if i < len(ghost) else None]
+            for i in range(max(len(now), len(ghost)))
+        ]
+
+    def q_change_bars(self, episode: int, upto_step: int) -> list[list[float | None]]:
+        """``[step, |change| if it explored, |change| if it exploited]`` through ``upto_step``."""
+        first = self.replay.episode_start[episode]
+        rows = []
+        for s in range(first, upto_step + 1):
+            size = round(abs(self._dq[s]), 6)
+            explored = bool(self.replay.step_explore[s])
+            rows.append([s - first + 1, size if explored else None, None if explored else size])
+        return rows
 
     def reward_by_episode(self, upto: int) -> list[list[float]]:
         """``[[episode_number, total_reward], ...]`` for completed episodes before ``upto``."""

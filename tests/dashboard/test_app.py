@@ -34,6 +34,27 @@ def test_session_builds_every_panel(replay):
     assert stage["props"]["_module"]["events"] == ["tick"]
 
 
+def test_the_whole_dashboard_sits_in_one_fixed_frame(replay):
+    async def run():
+        return _session(replay).root.to_json()
+
+    root = asyncio.run(run())
+    assert root["type"] == "frame"
+    assert (root["props"]["width"], root["props"]["height"]) == (1920, 1080)
+    assert root["props"]["rows"] == "56px 1fr 196px"
+    assert len(root["children"]) == 3  # header, the board and charts, the Q-table
+    assert "kiosk" not in root["props"]
+
+
+def test_kiosk_mode_is_an_option(replay):
+    async def run():
+        register_components()
+        factory = build_session_factory(replay, build_schedule(replay), kiosk=True)
+        return factory(indah.Context("kiosk")).root.to_json()
+
+    assert asyncio.run(run())["props"]["kiosk"] is True
+
+
 def test_a_browser_tick_moves_python_to_that_time(replay):
     async def run():
         session = _session(replay)

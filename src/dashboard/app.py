@@ -20,9 +20,6 @@ from src.replay.schedule import Pacing, Schedule, build_schedule
 
 STATIC = Path(__file__).parent / "static"
 
-# Chart strokes must work on both schemes until Chart can read theme tokens (PLAN.md, gap G5).
-ORANGE, TEAL, BLUE = "#f08a00", "#1fa99c", "#4d8fe0"
-
 
 def register_components() -> None:
     indah.register_component(
@@ -31,7 +28,7 @@ def register_components() -> None:
 
 
 def build_session_factory(
-    replay: ReplayData, schedule: Schedule
+    replay: ReplayData, schedule: Schedule, *, kiosk: bool = False
 ) -> Callable[[indah.Context], indah.Session]:
     def factory(ctx: indah.Context) -> indah.Session:
         player = Player(replay, schedule)
@@ -72,85 +69,134 @@ def build_session_factory(
             ],
         )
 
-        def chart(title, data, *, x_label, series, points=False, height=170):
+        episode_number = indah.computed(lambda: episode.value + 1)
+        step_number = indah.computed(lambda: frame.value.step_in_episode)
+        episodes = replay.episode_count
+        run = {"x_range": (1, episodes), "playhead": episode_number, "shade_after": True}
+
+        def chart(title, **options):
+            legend = "labels" if len(options["series"]) > 1 else "off"
             return indah.Card(
-                children=[
-                    indah.Chart(
-                        data,
-                        series=series,
-                        title=title,
-                        x_label=x_label,
-                        height=height,
-                        points=points,
-                    )
-                ]
+                padding="12px 16px",
+                children=[indah.Chart(title=title, height="fill", legend=legend, **options)],
             )
 
         charts = indah.Grid(
             columns=2,
+            rows="1fr 1fr 1fr",
+            gap="16px",
             children=[
                 chart(
                     "Reward per episode",
-                    indah.computed(lambda: player.reward_by_episode(episode.value)),
-                    x_label="episode",
-                    series=[{"label": "reward", "stroke": ORANGE}],
-                    points=True,
+                    data=indah.computed(lambda: player.reward_points(episode.value)),
+                    series=[
+                        {"label": "solved", "kind": "scatter", "stroke": "var(--x-pos)", "size": 4},
+                        {"label": "ran out of moves", "kind": "scatter", "stroke": "var(--x-dot)", "size": 4},
+                        {"label": "average", "stroke": "var(--x-gold)", "width": 2.5},
+                    ],
+                    y_range=(-180, 110),
+                    **run,
                 ),
                 chart(
                     "Steps per episode",
-                    indah.computed(lambda: player.steps_by_episode(episode.value)),
-                    x_label="episode",
-                    series=[{"label": "steps", "stroke": BLUE}],
-                    points=True,
+                    data=indah.computed(lambda: player.step_points(episode.value)),
+                    series=[
+                        {"label": "solved", "kind": "scatter", "stroke": "var(--x-pos)", "size": 4},
+                        {"label": "ran out of moves", "kind": "scatter", "stroke": "var(--x-dot)", "size": 4},
+                    ],
+                    y_range=(0, 160),
+                    rules=[{"y": 31, "label": "optimal 31", "color": "var(--x-gold)"}],
+                    **run,
                 ),
-                chart(
-                    "Epsilon at the start of each episode",
-                    player.epsilon_by_episode(),
-                    x_label="episode",
-                    series=[{"label": "epsilon", "stroke": ORANGE}],
+                indah.Cell(
+                    columns=2,
+                    children=[
+                        chart(
+                            "Epsilon at the start of each episode",
+                            data=player.epsilon_by_episode(),
+                            series=[{"label": "epsilon", "kind": "bars", "stroke": "var(--x-explore)"}],
+                            y_range=(0, 1),
+                            highlight=episode_number,
+                            highlight_color="var(--x-gold)",
+                            **{**run, "x_range": (0.5, episodes + 0.5)},
+                        )
+                    ],
                 ),
                 chart(
                     "Reward this episode",
-                    indah.computed(lambda: player.return_in_episode(episode.value, step.value)),
+                    data=indah.computed(
+                        lambda: player.return_vs_best(episode.value, step.value)
+                    ),
+                    series=[
+                        {"label": "this episode", "stroke": "var(--x-exploit)", "width": 2.5},
+                        {"label": "best so far", "stroke": "var(--muted)", "dash": [5, 4]},
+                    ],
                     x_label="step",
-                    series=[{"label": "return", "stroke": TEAL}],
                 ),
                 chart(
                     "Q-value change per step",
-                    indah.computed(lambda: player.q_change_in_episode(episode.value, step.value)),
+                    data=indah.computed(lambda: player.q_change_bars(episode.value, step.value)),
+                    series=[
+                        {"label": "explore", "kind": "bars", "stroke": "var(--x-explore)"},
+                        {"label": "exploit", "kind": "bars", "stroke": "var(--x-exploit)"},
+                    ],
                     x_label="step",
-                    series=[{"label": "|change|", "stroke": ORANGE}],
-                    points=True,
+                    highlight=step_number,
+                    highlight_color="var(--x-gold)",
                 ),
             ],
         )
 
         heatmap = indah.Card(
+            padding="12px 16px",
             children=[
                 indah.Heatmap(
                     indah.computed(lambda: player.heatmap_columns(applied.value)),
-                    colormap="viridis",
+                    colormap=["var(--x-heat-neg)", "var(--x-heat-zero)", "var(--x-heat-pos)"],
                     zmin=-1.3,
-                    zmax=0.3,
-                    height=140,
-                    title="Q-table: 243 states by 6 actions (dark gap = illegal move)",
-                    x_label="state",
-                    y_label="action",
+                    zmax=1.3,
+                    null_color="var(--surface-2)",
+                    origin="top",
+                    row_labels=["0>1", "0>2", "1>0", "1>2", "2>0", "2>1"],
+                    col_groups=[
+                        {"start": r * 81, "end": r * 81 + 80, "label": f"largest disc on rod {r}"}
+                        for r in range(3)
+                    ],
+                    mark_x=indah.computed(lambda: frame.value.state_id),
+                    mark_y=indah.computed(lambda: frame.value.action),
+                    mark_color="var(--x-gold)",
+                    height="fill",
+                    title="Q-table: 243 states by 6 actions (blank = illegal move)",
                 )
-            ]
+            ],
         )
 
-        top = indah.Row(align="start", children=[indah.Card(children=[stage]), charts])
-        return indah.Session(indah.Column(children=[header, top, heatmap]))
+        middle = indah.Grid(
+            columns="760px 1fr",
+            gap="16px",
+            children=[indah.Card(padding="16px 20px", children=[stage]), charts],
+        )
+        return indah.Session(
+            indah.Frame(
+                width=1920,
+                height=1080,
+                columns="1fr",
+                rows="56px 1fr 196px",
+                gap="16px",
+                padding="20px",
+                kiosk=kiosk,
+                children=[header, middle, heatmap],
+            )
+        )
 
     return factory
 
 
-def create_app(replay: ReplayData, pacing: Pacing | None = None):
+def create_app(replay: ReplayData, pacing: Pacing | None = None, *, kiosk: bool = False):
     register_components()
     schedule = build_schedule(replay, pacing)
     app = indah.create_app(
-        session_factory=build_session_factory(replay, schedule),
+        session_factory=build_session_factory(replay, schedule, kiosk=kiosk),
         theme=THEME,
         title="Hanoi RL",
         max_width="none",

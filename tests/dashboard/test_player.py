@@ -98,3 +98,42 @@ def test_epsilon_series_has_one_point_per_episode(player, replay):
     assert len(series) == replay.episode_count
     assert series[0] == [1, replay.episode_epsilon[0]]
     assert np.all(np.diff([v for _, v in series]) <= 1e-12)
+
+
+def test_reward_points_split_solved_from_failed_and_average(player, replay):
+    rows = player.reward_points(40)
+    assert len(rows) == 40
+    for e, (episode, solved, failed, average) in enumerate(rows):
+        assert episode == e + 1
+        assert (solved is None) != (failed is None)  # exactly one of the two dots
+        assert (solved is not None) == bool(replay.episode_solved[e])
+    window = replay.episode_reward[15:40]
+    assert rows[39][3] == pytest.approx(sum(window) / 25, abs=1e-3)
+    assert rows[0][3] == replay.episode_reward[0]
+
+
+def test_step_points_count_the_steps_of_each_episode(player, replay):
+    rows = player.step_points(10)
+    for e, (episode, solved, failed) in enumerate(rows):
+        steps = len(replay.episode_range(e))
+        assert solved == (steps if replay.episode_solved[e] else None)
+        assert failed == (None if replay.episode_solved[e] else steps)
+
+
+def test_return_vs_best_ghosts_the_best_solved_episode_so_far(player, replay):
+    first_solved = next(e for e in range(replay.episode_count) if replay.episode_solved[e])
+    assert all(r[2] is None for r in player.return_vs_best(first_solved, replay.episode_start[first_solved]))
+    later = first_solved + 1
+    rows = player.return_vs_best(later, replay.episode_start[later] + 2)
+    assert [r[1] is not None for r in rows[:3]] == [True, True, True]
+    assert rows[0][2] == player._cumulative[replay.episode_start[first_solved]]
+    assert len(rows) >= len(replay.episode_range(first_solved))
+
+
+def test_q_change_bars_split_by_decision_mode(player, replay):
+    first = replay.episode_start[3]
+    rows = player.q_change_bars(3, first + 5)
+    for i, (step, explored, exploited) in enumerate(rows):
+        assert step == i + 1
+        assert (explored is None) != (exploited is None)
+        assert (explored is not None) == bool(replay.step_explore[first + i])

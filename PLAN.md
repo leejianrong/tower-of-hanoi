@@ -1,6 +1,6 @@
 # Plan: browser dashboard for the Q-learning replay
 
-Status: slices 1 to 3 done, slice 4 next. Supersedes the Pygame plan in `docs/archive/`.
+Status: slices 1 to 4 done (the indah features await review upstream), slice 5 next. Supersedes the Pygame plan in `docs/archive/`.
 
 ## Goal
 
@@ -51,7 +51,7 @@ flowchart LR
 | 1 | Data layer: state ids, compact replay, Q-table rebuild, pacing schedule; Pygame removed | Done |
 | 2 | Dashboard on today's indah with a server clock: layout, charts, heatmap, board and pie modules (no motion) | Done |
 | 3 | Browser clock, board animation (lift, travel over, descend; no arrow), transport and scrubbing, pacing caps | Done |
-| 4 | Indah features below, each as an indah ADR and card | Next |
+| 4 | Indah features below (indah ADR-0044): fixed frame, scatter and bar charts, heatmap masks and highlights, pie | Done; built on indah branch `agent/dashboard-pie`, pinned in `pyproject.toml` until released |
 | 5 | Deterministic clock, `?record` mode, frame capture and ffmpeg export | |
 | 6 | Sound cues synced to the clock (ADR-0005), auto-pacing polish | |
 
@@ -59,21 +59,16 @@ flowchart LR
 
 Found while building slice 2; slice 4 upstreams the generic ones.
 
-| Gap | Today | Needed |
+| Gap | State | Notes |
 |-----|-------|--------|
-| G1 Fixed viewport | `Grid`/`Row`/`Column` flow and scroll | A `Frame` that fits one screen (1920 x 1080 scaled to the window), plus a record mode |
-| G2 Chart kinds | Line, optional points | Bars, a playhead, shaded future region, dashed reference lines, a ghost series |
-| G3 Heatmap | `magma`/`viridis`/`gray`; empty cells paint as the lowest colour | Masked cells, labels, current-cell highlight, custom diverging colours, cell aspect |
-| G4 Pie | None | A pie with one lit slice |
-| G5 Theming | Core roles plus `x-` extras, usable by modules only | Charts and canvases that read tokens, so the theme toggle recolours them |
+| G1 Fixed viewport | Done: `Frame` (indah ADR-0044), `Grid` track lists, `Cell`, `height="fill"` | The whole dashboard fits one screen at any window size; `--kiosk` covers the window for recording |
+| G2 Chart kinds | Done: `kind` (scatter, bars), playhead with the future dimmed, highlight bar, rules, ranges, `legend` | Used by all five charts |
+| G3 Heatmap | Done: colour stops, blank cells (`null_color`), `origin`, row labels, column groups, `mark_x`/`mark_y` | Illegal moves are blank, the current state is spotlit with its action ringed |
+| G4 Pie | Done as a generic `Pie` in indah, but this dashboard keeps its pie inside the stage module | A `Pie` follows server signals, so it would trail the browser clock; it moves over when indah has a client clock (G6) |
+| G5 Theming | Done for charts and the heatmap: colours written `var(--token)` follow the theme toggle | Tokens: `x-explore`, `x-exploit`, `x-gold`, `x-pos`, `x-dot`, `x-heat-*` |
 | G6 Client clock | None | A browser-side playback clock with a manual mode for export |
 | G7 Large data | Props go through patches | Fetch a static dataset once (typed arrays) |
 | G8 Sound cues | `Audio` plays a file | Cues fired from clock events |
-
-Seen in the screenshots of slice 3: a chart in `points` mode still draws its line, so the reward and
-steps charts read as spikes (wants a scatter kind, G2); the heatmap paints unvisited zeros and
-negatives with opposite ends of one colour scale and cannot tell an illegal move from a very
-negative Q (G3); and the page is taller than one screen (G1).
 
 ## Pacing
 
